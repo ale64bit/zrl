@@ -2,17 +2,7 @@ workspace(name = "zrl")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-_GLFW_VERSION = "3.2.1"
-
 _VULKAN_VERSION = "1.1.114.0"
-
-http_archive(
-    name = "glfw",
-    build_file = "@//external:glfw.BUILD",
-    sha256 = "e10f0de1384d75e6fc210c53e91843f6110d6c4f3afbfb588130713c2f9d8fe8",
-    strip_prefix = "glfw-%s" % _GLFW_VERSION,
-    urls = ["https://github.com/glfw/glfw/archive/%s.tar.gz" % _GLFW_VERSION],
-)
 
 http_archive(
     name = "vulkan",

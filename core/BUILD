@@ -1,4 +1,4 @@
-load("//core:builddefs.bzl", "COPTS", "DEFINES")
+load("//core:builddefs.bzl", "COPTS", "DEFINES", "LINKOPTS")
 
 cc_library(
     name = "core",
@@ -27,9 +27,9 @@ cc_library(
     ],
     copts = COPTS,
     defines = DEFINES,
+    linkopts = LINKOPTS,
     visibility = ["//visibility:public"],
     deps = [
-        "@glfw//:glfw_lib",
         "@vulkan//:sdk",
     ],
 )
