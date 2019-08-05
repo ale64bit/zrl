@@ -30,3 +30,12 @@
 *.exe
 *.out
 *.app
+
+# Bazel
+/bazel-*
+/bazel.iml
+.bazelversion
+
+# Vim
+.*.swp
+.ycm_extra_conf.py
