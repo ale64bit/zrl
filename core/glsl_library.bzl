@@ -36,7 +36,7 @@ def _glsl_library_internal_impl(ctx):
         CcInfo(compilation_context = compilation_context),
     ]
 
-glsl_library_internal = rule(
+_glsl_library_internal = rule(
     attrs = {
         "srcs": attr.label_list(
             allow_files = True,
@@ -52,7 +52,7 @@ glsl_library_internal = rule(
 )
 
 def glsl_library(name, srcs):
-    glsl_library_internal(
+    _glsl_library_internal(
         name = name,
         srcs = srcs,
         compiler = select({
