@@ -14,7 +14,7 @@ def _glsl_library_internal_impl(ctx):
             inputs = [src],
             outputs = [outf],
             executable = ctx.executable.compiler,
-            progress_message = "Compiling " + src.basename,
+            progress_message = "compiling " + src.basename,
             arguments = [
                 "-V",
                 "--vn",
@@ -55,8 +55,5 @@ def glsl_library(name, srcs):
     _glsl_library_internal(
         name = name,
         srcs = srcs,
-        compiler = select({
-            "@bazel_tools//src/conditions:windows": "@vulkan//:Bin/glslangValidator.exe",
-            "//conditions:default": "@vulkan//:bin/glslangValidator",
-        }),
+        compiler = "@vulkan_repo//:glsl_compiler",
     )

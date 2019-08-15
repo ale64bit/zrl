@@ -17,7 +17,6 @@ BufferPool::BufferPool(const Core &core, const char *id, VkDeviceSize size,
     : Buffer(core, size, mem_props, usage), id_(id),
       min_block_size_(min_block_size), free_size_(size), mapped_(nullptr) {
   CHECK_PC((size & (size - 1)) == 0, "size must be a power of two");
-  // DLOG << "BufferPool(" << id_ << "): size=" << size << "\n";
   blocks_.insert(std::make_pair(size, 0));
   if (mapped) {
     CHECK_VK(vkMapMemory(device_, memory_, 0, size_, 0, &mapped_));
@@ -31,7 +30,6 @@ BufferPool::~BufferPool() {
 }
 
 Block BufferPool::Alloc(VkDeviceSize size) {
-  // DLOG << "BufferPool(" << id_ << "): alloc: size=" << size << "\n";
   while (true) {
     auto it = blocks_.lower_bound(std::make_pair(size, 0));
     if (it == blocks_.end()) { // Out of memory
@@ -49,9 +47,6 @@ Block BufferPool::Alloc(VkDeviceSize size) {
       Block b = *it;
       blocks_.erase(it);
       free_size_ -= b.first;
-      // DLOG << "BufferPool(" << id_ << "): allocated block: size=" << b.first
-      //     << " offset=" << b.second << "\n";
-      // DLOG << "BufferPool(" << id_ << "): free size: " << free_size_ << "\n";
       return b;
     }
   }
@@ -70,9 +65,6 @@ void BufferPool::Free(Block b) {
     }
   }
   free_size_ += b.first;
-  // DLOG << "BufferPool(" << id_ << "): freed block: size=" << b.first
-  //      << " offset=" << b.second << "\n";
-  // DLOG << "BufferPool(" << id_ << "): free size: " << free_size_ << "\n";
 }
 
 void BufferPool::Write(VkDeviceSize offset, VkDeviceSize size,

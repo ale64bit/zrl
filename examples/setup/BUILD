@@ -1,4 +1,4 @@
-load("//core:builddefs.bzl", "COPTS", "DEFINES", "LINKOPTS")
+load("//core:builddefs.bzl", "COPTS", "DEFINES")
 
 cc_binary(
     name = "main",
@@ -7,6 +7,6 @@ cc_binary(
     defines = DEFINES,
     deps = [
         "//core",
-        "@vulkan//:sdk",
+        "@vulkan_repo//:sdk",
     ],
 )

@@ -1,0 +1,21 @@
+module hellotriangle
+
+pipeline Draw(): fvec4 {
+
+  def vertex(pos, col: fvec3): fvec3 {
+    builtin.position = fvec4(pos, 1.0)
+    return col
+  }
+
+  def fragment(col: fvec3): fvec4 {
+    return fvec4(col, 1.0)
+  }
+}
+
+renderer Main() {
+
+  def main(triangle: atom) {
+    builtin.screen = fvec4(0.0, 0.0, 0.0, 1.0)
+    builtin.screen += Draw(pos=triangle, col=triangle)
+  }
+}

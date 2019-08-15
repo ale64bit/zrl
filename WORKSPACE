@@ -1,13 +1,23 @@
 workspace(name = "zrl")
 
+load("//repo_tools:zrlc.bzl", "zrlc_repo")
+
+zrlc_repo(name = "zrlc_repo")
+
+load("//repo_tools:glfw.bzl", "glfw_repo")
+
+glfw_repo(name = "glfw_repo")
+
+load("//repo_tools:vulkan.bzl", "vulkan_repo")
+
+vulkan_repo(name = "vulkan_repo")
+
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-_VULKAN_VERSION = "1.1.114.0"
-
 http_archive(
-    name = "vulkan",
-    build_file = "@//external:vulkan.BUILD",
-    sha256 = "796d3eedea9d2f5fd0720e5ebd9cc6072c95d5e958abea6d07b121db3973e968",
-    strip_prefix = "%s/x86_64" % _VULKAN_VERSION,
-    urls = ["https://sdk.lunarg.com/sdk/download/%s/linux/vulkansdk-linux-x86_64-%s.tar.gz?Human=true" % (_VULKAN_VERSION, _VULKAN_VERSION)],
+    name = "glm",
+    build_file = "glm.BUILD",
+    sha256 = "5e33b6131cea6a904339734b015110d4342b7dc02d995164fdb86332d28a5aa4",
+    strip_prefix = "glm-0.9.9.5",
+    url = "https://github.com/g-truc/glm/archive/0.9.9.5.tar.gz",
 )
