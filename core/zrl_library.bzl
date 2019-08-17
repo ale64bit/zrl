@@ -27,7 +27,7 @@ def _zrl_library_internal_impl(ctx):
     shader_include_tree = ctx.actions.declare_directory("shader_include")
 
     # TODO(ale64bit): implement the equivalent Windows command.
-    compile_shaders_cmd = 'for i in %s/*.glsl; do %s -V "$i" --vn "k$(basename $i | tr . _)_" -o "%s/$(basename $i).h"; done' % (shader_tree.path, ctx.executable._glsl_compiler.path, shader_include_tree.path)
+    compile_shaders_cmd = 'shopt -s nullglob && for i in %s/*.glsl; do %s -V "$i" --vn "k$(basename $i | tr . _)_" -o "%s/$(basename $i).h"; done' % (shader_tree.path, ctx.executable._glsl_compiler.path, shader_include_tree.path)
     ctx.actions.run_shell(
         inputs = [shader_tree],
         outputs = [shader_include_tree],
@@ -38,7 +38,7 @@ def _zrl_library_internal_impl(ctx):
     gen_tree = ctx.actions.declare_directory("gen.cc")
 
     # TODO(ale64bit): implement the equivalent Windows command.
-    collect_sources_cmd = 'for i in %s/*.cc %s/*.h %s/*.h; do cp "$i" "%s/$(basename $i)"; done' % (src_tree.path, include_tree.path, shader_include_tree.path, gen_tree.path)
+    collect_sources_cmd = 'shopt -s nullglob && for i in %s/*.cc %s/*.h %s/*.h; do cp "$i" "%s/$(basename $i)"; done' % (src_tree.path, include_tree.path, shader_include_tree.path, gen_tree.path)
     ctx.actions.run_shell(
         inputs = [shader_include_tree, include_tree, src_tree],
         outputs = [gen_tree],
@@ -69,7 +69,7 @@ _zrl_library_internal = rule(
     implementation = _zrl_library_internal_impl,
 )
 
-def zrl_library(name, src):
+def zrl_library(name, src, defines = []):
     gen_name = "_gen_" + name
     _zrl_library_internal(
         name = gen_name,
@@ -80,6 +80,9 @@ def zrl_library(name, src):
         srcs = [gen_name],
         hdrs = [gen_name],
         copts = COPTS,
-        defines = DEFINES,
-        deps = ["//core"],
+        defines = DEFINES + defines,
+        deps = [
+            "//core",
+            "@vulkan_repo//:sdk",
+        ],
     )

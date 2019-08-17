@@ -1,32 +1,32 @@
 _BUILD_CONTENTS_LINUX = """
 filegroup(
-  name = "glsl_compiler",
-  srcs = ["vulkan/bin/glslangValidator"],
-  visibility = ["//visibility:public"],
+    name = "glsl_compiler",
+    srcs = ["vulkan/bin/glslangValidator"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
-  name = "sdk",
-  srcs = ["vulkan/lib/libvulkan.so"],
-  hdrs = glob(["vulkan/include/**/*.h"]),
-  strip_include_prefix = "vulkan/include",
-  visibility = ["//visibility:public"],
+    name = "sdk",
+    srcs = ["vulkan/lib/libvulkan.so"],
+    hdrs = glob(["vulkan/include/**/*.h"]),
+    strip_include_prefix = "vulkan/include",
+    visibility = ["//visibility:public"],
 )
 """
 
 _BUILD_CONTENTS_WINDOWS = """
 filegroup(
-  name = "glsl_compiler",
-  srcs = ["vulkan/Bin/glslangValidator.exe"],
-  visibility = ["//visibility:public"],
+    name = "glsl_compiler",
+    srcs = ["vulkan/Bin/glslangValidator.exe"],
+    visibility = ["//visibility:public"],
 )
 
 cc_library(
-  name = "sdk",
-  srcs = ["vulkan/Lib/vulkan-1.lib"],
-  hdrs = glob(["vulkan/Include/**/*.h"]),
-  strip_include_prefix = "vulkan/Include",
-  visibility = ["//visibility:public"],
+    name = "sdk",
+    srcs = ["vulkan/Lib/vulkan-1.lib"],
+    hdrs = glob(["vulkan/Include/**/*.h"]),
+    strip_include_prefix = "vulkan/Include",
+    visibility = ["//visibility:public"],
 )
 """
 

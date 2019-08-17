@@ -1,0 +1,315 @@
+// Based on:
+// https://github.com/KhronosGroup/glTF-Sample-Viewer
+module pbr
+
+const kGamma = 2.2
+const kPI = 3.141592653589793
+const kExposure = 4.5
+
+type Light {
+  direction: fvec3
+  range: float
+  color: fvec3
+  intensity: float
+  position: fvec3
+  innerConeCos: float
+  outerConeCos: float
+  lightType: int
+  _: fvec2 // padding
+}
+
+type Global {
+  projView: fmat4
+  cameraPosition: fvec4
+  light: Light
+}
+
+type Material {
+  baseColorFactor: fvec4
+  hasBaseColor, hasNormal, hasOcclusion, hasEmissive, hasMetallicRoughness: bool
+  baseColor, normal, occlusion, emissive, metallicRoughness: sampler2D
+  emissiveFactor: fvec3
+  metallicFactor, roughnessFactor: float
+  normalScale: float
+  occlusionStrength: float
+  alphaMode: int
+  alphaCutoff: float
+}
+
+type PerObject {
+  model: fmat4
+  normalMat: fmat4
+  hasColor: bool
+  hasTangent: bool
+}
+
+type AngularInfo {
+  NdotL: float
+  NdotV: float
+  NdotH: float
+  LdotH: float
+  VdotH: float
+}
+
+type MaterialInfo {
+  perceptualRoughness: float // roughness value, as authored by the model creator (input to shader) 
+  reflectance0: fvec3        // full reflectance color (normal incidence angle)
+  alphaRoughness: float      // roughness mapped to a more linear change in the roughness (proposed by [2])
+  diffuseColor: fvec3        // color contribution from diffuse lighting
+  reflectance90: fvec3       // reflectance color at grazing angle
+  specularColor: fvec3       // color contribution from specular lighting
+}
+
+pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
+
+  // See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
+  def linear2srgb(color: fvec3): fvec3 {
+    val invGamma = 1.0 / kGamma
+    return pow(color, fvec3(invGamma))
+  }
+
+  // See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
+  def srgb2linear(color: fvec4): fvec4 {
+    val v = pow(color.xyz, fvec3(kGamma))
+    return fvec4(v, color.w)
+  }
+
+  def computeTransforms(normal: fvec3, tangent: fvec4): (fvec3, fmat3) {
+    val zero = fvec3(0.0)
+    normal = normalize(normal)
+    val augNor = fvec4(normal.x, normal.y, normal.z, 0.0)
+    if obj.hasTangent {
+      val norTan = normalize(fvec3(tangent.x, tangent.y, tangent.z))
+      val augTan = fvec4(norTan.x, norTan.y, norTan.z, 0.0)
+      val normalW = normalize((obj.normalMat * augNor).xyz)
+      val tangentW = normalize((obj.model * augTan).xyz)
+      val bitangentW = cross(normalW, tangentW) * tangent.w
+      return zero, fmat3(tangentW, bitangentW, normalW)
+    } else {
+      val nor = normalize((obj.normalMat * augNor).xyz)
+      return nor, fmat3(zero, zero, zero) 
+    }
+  }
+
+  // See https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/primitive.vert
+  def vertex(position, normal, color: fvec3, tangent: fvec4, uv: fvec2): (fvec3, fvec3, fvec4, fmat3, fvec2) {
+    val augPos = fvec4(position.x, position.y, position.z, 1.0)
+    var locPos = obj.model * augPos
+    // locPos.y = -locPos.y
+    val outWorldPos = locPos.xyz / locPos.w
+    val nor, tbn = computeTransforms(normal, tangent)
+    var vertexColor = fvec4(1.0, 1.0, 1.0, 1.0)
+    if obj.hasColor {
+      vertexColor = fvec4(color.x, color.y, color.z, 1.0)
+    }
+    builtin.position = g.projView * fvec4(outWorldPos.x, outWorldPos.y, outWorldPos.z, 1.0)
+    return outWorldPos, nor, vertexColor, tbn, uv
+  }
+
+  def getNormal(pos: fvec3, uv: fvec2, tbn: fmat3, nor: fvec3): fvec3 {
+    if mat.hasNormal {
+      val n = texture(mat.normal, uv).rgb
+      return normalize(tbn * ((2.0 * n - 1.0) * fvec3(mat.normalScale, mat.normalScale, 1.0)))
+    } else {
+      val n = fvec3(tbn[2,0], tbn[2,1], tbn[2,2])
+      return normalize(n)
+    }
+  }
+
+  def getAngularInfo(pointToLight, normal, view: fvec3): AngularInfo {
+    val n = normalize(normal)
+    val v = normalize(view)
+    val l = normalize(pointToLight)
+    val h = normalize(l + v)
+    
+    return AngularInfo(
+        NdotL = clamp(dot(n, l), 0.0, 1.0),
+        NdotV = clamp(dot(n, v), 0.0, 1.0),
+        NdotH = clamp(dot(n, h), 0.0, 1.0),
+        LdotH = clamp(dot(l, h), 0.0, 1.0),
+        VdotH = clamp(dot(v, h), 0.0, 1.0))
+  }
+
+  // Lambert lighting
+  // see https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
+  def diffuse(materialInfo: MaterialInfo): fvec3 {
+    return materialInfo.diffuseColor / kPI
+  }
+
+  // The following equation models the Fresnel reflectance term of the spec equation (aka F())
+  // Implementation of fresnel from [4], Equation 15
+  def specularReflection(materialInfo: MaterialInfo, angularInfo: AngularInfo): fvec3 {
+    return materialInfo.reflectance0 + (materialInfo.reflectance90 - materialInfo.reflectance0) * pow(clamp(1.0 - angularInfo.VdotH, 0.0, 1.0), 5.0)
+  }
+
+  // Smith Joint GGX
+  // Note: Vis = G / (4 * NdotL * NdotV)
+  // see Eric Heitz. 2014. Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs. Journal of Computer Graphics Techniques, 3
+  // see Real-Time Rendering. Page 331 to 336.
+  // see https://google.github.io/filament/Filament.md.html#materialsystem/specularbrdf/geometricshadowing(specularg)
+  def visibilityOcclusion(materialInfo: MaterialInfo, angularInfo: AngularInfo): float {
+    val NdotL = angularInfo.NdotL
+    val NdotV = angularInfo.NdotV
+    val alphaRoughnessSq = materialInfo.alphaRoughness * materialInfo.alphaRoughness
+
+    val GGXV = NdotL * sqrt(NdotV * NdotV * (1.0 - alphaRoughnessSq) + alphaRoughnessSq)
+    val GGXL = NdotV * sqrt(NdotL * NdotL * (1.0 - alphaRoughnessSq) + alphaRoughnessSq)
+   
+    val GGX = GGXV + GGXL
+    if GGX > 0.0 {
+      return 0.5 / GGX
+    }
+    return 0.0
+  }
+
+  // The following equation(s) model the distribution of microfacet normals across the area being drawn (aka D())
+  // Implementation from "Average Irregularity Representation of a Roughened Surface for Ray Reflection" by T. S. Trowbridge, and K. P. Reitz
+  // Follows the distribution function recommended in the SIGGRAPH 2013 course notes from EPIC Games [1], Equation 3.
+  def microfacetDistribution(materialInfo: MaterialInfo, angularInfo: AngularInfo): float {
+    val alphaRoughnessSq = materialInfo.alphaRoughness * materialInfo.alphaRoughness
+    val f = (angularInfo.NdotH * alphaRoughnessSq - angularInfo.NdotH) * angularInfo.NdotH + 1.0
+    return alphaRoughnessSq / (kPI * f * f)
+  }
+
+  def getPointShade(materialInfo: MaterialInfo, pointToLight, normal, view: fvec3): fvec3 {
+    val angularInfo = getAngularInfo(pointToLight, normal, view)
+    if angularInfo.NdotL > 0.0 || angularInfo.NdotV > 0.0 {
+      // Calculate the shading terms for the microfacet specular shading model
+      val F = specularReflection(materialInfo, angularInfo)
+      val Vis = visibilityOcclusion(materialInfo, angularInfo)
+      val D = microfacetDistribution(materialInfo,angularInfo)
+  
+      // Calculation of analytical lighting contribution
+      val diffuseContrib = (1.0 - F) * diffuse(materialInfo)
+      val specContrib = F * Vis * D
+     
+      // Obtain final intensity as reflectance (BRDF) scaled by the energy of the light (cosine law)
+      return angularInfo.NdotL * (diffuseContrib + specContrib)
+    }
+    return fvec3(0.0, 0.0, 0.0)
+  }
+ 
+  // https://github.com/KhronosGroup/glTF/blob/master/extensions/2.0/Khronos/KHR_lights_punctual/README.md#range-property
+  def getRangeAttenuation(range, dist: float): float {
+    if (range < 0.0) {
+        // negative range means unlimited
+        return 1.0
+    }
+    return max(min(1.0 - pow(dist / range, 4.0), 1.0), 0.0) / pow(dist, 2.0)
+  }
+
+  def applyDirectionalLight(l: Light, materialInfo: MaterialInfo, normal, view: fvec3): fvec3 {
+    val pointToLight = -l.direction
+    val shade = getPointShade(materialInfo, pointToLight, normal, view)
+    return l.intensity * l.color * shade
+  }
+
+  def applyPointLight(l: Light, materialInfo: MaterialInfo, position, normal, view: fvec3): fvec3 {
+    val pointToLight = l.position - position
+    val dist = length(pointToLight)
+    val attenuation = getRangeAttenuation(l.range, dist)
+    val shade = getPointShade(materialInfo, pointToLight, normal, view)
+    return attenuation * l.intensity * l.color * shade
+  }
+
+  def toneMap(color: fvec3): fvec3 {
+    color *= kExposure
+    return linear2srgb(color)
+  }
+
+  // See https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/metallic-roughness.frag
+  def fragment(pos, nor: fvec3, vertexColor: fvec4, tbn: fmat3, uv: fvec2): fvec4 {
+    if builtin.currentDepth < builtin.fragCoord.z {
+      discard
+    }
+
+    val f0 = fvec3(0.04, 0.04, 0.04)
+    var perceptualRoughness, metallic = 0.0, 0.0
+    var baseColor = fvec4(0.0, 0.0, 0.0, 1.0)
+    var diffuseColor, specularColor = fvec3(0.0, 0.0, 0.0), fvec3(0.0, 0.0, 0.0)
+
+    if mat.hasMetallicRoughness {
+      val mrSample = texture(mat.metallicRoughness, uv)
+      metallic = mrSample.b * mat.metallicFactor
+      perceptualRoughness = mrSample.g * mat.roughnessFactor
+    } else {
+      metallic = mat.metallicFactor
+      perceptualRoughness = mat.roughnessFactor
+    }
+
+    if mat.hasBaseColor {
+      baseColor = srgb2linear(texture(mat.baseColor, uv)) * mat.baseColorFactor
+    } else {
+      baseColor = mat.baseColorFactor
+    }
+
+    baseColor *= vertexColor
+    diffuseColor = baseColor.rgb * (1.0-f0) * (1.0-metallic)
+    specularColor = mix(f0, baseColor.rgb, metallic)
+
+    if mat.alphaMode == 0 { // OPAQUE
+      baseColor.a = 1.0
+    } else { 
+      if mat.alphaMode == 1 { // MASK
+        if baseColor.a < mat.alphaCutoff { discard }
+        baseColor.a = 1.0
+      }
+    }
+
+    perceptualRoughness = clamp(perceptualRoughness, 0.0, 1.0)
+    metallic = clamp(metallic, 0.0, 1.0)
+
+    val alphaRoughness = perceptualRoughness * perceptualRoughness
+    val reflectance = max(max(specularColor.r, specularColor.g), specularColor.b)
+    val specularEnvironmentR0 = specularColor.rgb
+    val refl2 = clamp(reflectance * 50.0, 0.0, 1.0)
+    val specularEnvironmentR90 = fvec3(refl2, refl2, refl2)
+    
+    val materialInfo = MaterialInfo(
+        perceptualRoughness,
+        specularEnvironmentR0,
+        alphaRoughness,
+        diffuseColor,
+        specularEnvironmentR90,
+        specularColor
+    )
+
+    // Lighting
+
+    val normal = getNormal(pos, uv, tbn, nor)
+    val view = normalize(g.cameraPosition.xyz - pos)
+    var color = fvec3(0.0, 0.0, 0.0)
+
+    if g.light.lightType == 0 {
+      color += applyDirectionalLight(g.light, materialInfo, normal, view)
+    }
+    if g.light.lightType == 1 {
+      color += applyPointLight(g.light, materialInfo, pos, normal, view)
+    }
+
+    if mat.hasOcclusion {
+      color = mix(color, color * texture(mat.occlusion, uv).r, mat.occlusionStrength)
+    }
+ 
+    if mat.hasEmissive {
+      color += srgb2linear(texture(mat.emissive, uv)).rgb * mat.emissiveFactor
+    }
+    
+    color = toneMap(color)
+    return fvec4(color.r, color.g, color.b, baseColor.a)
+  }
+}
+
+renderer PBR(depthBuf: rt_ds) {
+
+  def main(global: atom, geometry: atomlist) {
+    depthBuf = 1.0
+    builtin.screen = fvec4(0.0, 0.0, 0.0, 1.0) 
+    for g in geometry {
+      builtin.screen, depthBuf += ForwardPass(g=global, 
+                                              mat=g, obj=g, 
+                                              position=g, normal=g, color=g, tangent=g, uv=g)
+    }
+  }
+}
+

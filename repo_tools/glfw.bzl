@@ -1,35 +1,35 @@
 _BUILD_CONTENTS_LINUX = """
 cc_import(
-  name = "glfw_static_lib",
-  static_library = "glfw/lib/libglfw3.a",
-  alwayslink = 1,
+    name = "glfw_static_lib",
+    static_library = "glfw/lib/libglfw3.a",
+    alwayslink = 1,
 )
 
 cc_library(
-  name = "glfw",
-  hdrs = glob(["glfw/include/GLFW/**/*.h"]),
-  deps = [":glfw_static_lib"],
-  linkopts = _LINKOPTS,
-  strip_include_prefix = "glfw/include",
-  visibility = ["//visibility:public"],
+    name = "glfw",
+    hdrs = glob(["glfw/include/GLFW/**/*.h"]),
+    deps = [":glfw_static_lib"],
+    linkopts = _LINKOPTS,
+    strip_include_prefix = "glfw/include",
+    visibility = ["//visibility:public"],
 )
 """
 
 _BUILD_CONTENTS_WINDOWS = """
 cc_import(
-  name = "glfw_static_lib",
-  interface_library = "glfw/lib-vc2015/glfw3dll.lib",
-  shared_library = "glfw/lib-vc2015/glfw3.dll",
-  alwayslink = 1,
+    name = "glfw_static_lib",
+    interface_library = "glfw/lib-vc2015/glfw3dll.lib",
+    shared_library = "glfw/lib-vc2015/glfw3.dll",
+    alwayslink = 1,
 )
 
 cc_library(
-  name = "glfw",
-  hdrs = glob(["glfw/include/GLFW/**/*.h"]),
-  deps = [":glfw_static_lib"],
-  linkopts = _LINKOPTS,
-  strip_include_prefix = "glfw/include",
-  visibility = ["//visibility:public"],
+    name = "glfw",
+    hdrs = glob(["glfw/include/GLFW/**/*.h"]),
+    deps = [":glfw_static_lib"],
+    linkopts = _LINKOPTS,
+    strip_include_prefix = "glfw/include",
+    visibility = ["//visibility:public"],
 )
 """
 

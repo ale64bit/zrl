@@ -12,6 +12,17 @@
 struct Triangle {
   const std::array<glm::fvec3, 3> position;
   const std::array<glm::fvec3, 3> color;
+} triangle = {
+    {
+        glm::fvec3(0.0, -1.0, 0.0),
+        glm::fvec3(1.0, 1.0, 0.0),
+        glm::fvec3(-1.0, 1.0, 0.0),
+    },
+    {
+        glm::fvec3(1.0, 0.0, 0.0),
+        glm::fvec3(0.0, 1.0, 0.0),
+        glm::fvec3(0.0, 0.0, 1.0),
+    },
 };
 
 template <> struct Draw_indices_<Triangle> {
@@ -54,22 +65,9 @@ int main() {
   zrl::Core core(config);
   Main renderer(core);
 
-  Triangle t = {
-      {
-          glm::fvec3(0.0, -1.0, 0.0),
-          glm::fvec3(-1.0, 1.0, 0.0),
-          glm::fvec3(1.0, 1.0, 0.0),
-      },
-      {
-          glm::fvec3(1.0, 0.0, 0.0),
-          glm::fvec3(0.0, 1.0, 0.0),
-          glm::fvec3(0.0, 0.0, 1.0),
-      },
-  };
-
   while (!glfwWindowShouldClose(core.GetWindow())) {
     glfwPollEvents();
-    renderer.Render(t);
+    renderer.Render(triangle);
   }
 
   return 0;
