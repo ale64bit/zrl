@@ -6,13 +6,15 @@
 
 namespace zrl {
 
+constexpr VkFormat kPreferredColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
+
 static VkSurfaceFormatKHR
 ChooseSurfaceFormat(const std::vector<VkSurfaceFormatKHR> &formats) {
   if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
-    return {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+    return {kPreferredColorFormat, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
   }
   for (const auto &format : formats) {
-    if (format.format == VK_FORMAT_B8G8R8A8_UNORM &&
+    if (format.format == kPreferredColorFormat &&
         format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
       return format;
     }

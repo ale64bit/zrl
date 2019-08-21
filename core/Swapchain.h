@@ -16,6 +16,9 @@ public:
   VkFormat GetSurfaceFormat() const { return surface_format_.format; }
   VkColorSpaceKHR GetColorSpace() const { return surface_format_.colorSpace; }
   VkExtent2D GetExtent() const { return extent_; }
+  float GetAspect() const {
+    return static_cast<float>(extent_.width) / extent_.height;
+  }
   uint32_t GetImageCount() const { return image_count_; }
   VkPresentModeKHR GetPresentMode() const { return present_mode_; }
   const std::vector<VkImage> &GetImages() const { return images_; }
