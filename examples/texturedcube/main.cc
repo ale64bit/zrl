@@ -135,7 +135,7 @@ template <> struct Draw_mvp<Cube> {
 
 template <> struct Draw_tex<Cube> {
   void operator()(const Cube &c, uint32_t &uid,
-                  SampledImageReference *ref) const noexcept {
+                  SampledImage2DReference *ref) const noexcept {
     uid = 1;
     if (ref == nullptr) {
       return;
@@ -149,8 +149,8 @@ template <> struct Draw_tex<Cube> {
     ref->sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     ref->sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     ref->sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    ref->sampler_create_info.anisotropyEnable = VK_FALSE;
-    ref->sampler_create_info.maxAnisotropy = 0.0f;
+    ref->sampler_create_info.anisotropyEnable = VK_TRUE;
+    ref->sampler_create_info.maxAnisotropy = 8.0f;
     ref->sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     ref->sampler_create_info.unnormalizedCoordinates = VK_FALSE;
     ref->sampler_create_info.compareEnable = VK_FALSE;
@@ -162,13 +162,15 @@ template <> struct Draw_tex<Cube> {
     // Image
     ref->format = VK_FORMAT_R8G8B8A8_UNORM;
     int width, height, channels;
-    ref->image_data = stbi_load("assets/zrl-logo.png", &width, &height,
-                                &channels, STBI_rgb_alpha);
-    CHECK_PC(ref->image_data != nullptr, "failed to load image");
+    ref->image_data.resize(1);
+    ref->image_data[0].push_back(stbi_load("assets/zrl-logo.png", &width,
+                                           &height, &channels, STBI_rgb_alpha));
+    CHECK_PC(ref->image_data[0][0] != nullptr, "failed to load image");
+    ref->size = width * height * 4;
     ref->width = static_cast<uint32_t>(width);
     ref->height = static_cast<uint32_t>(height);
     ref->channels = static_cast<uint32_t>(channels);
-    ref->size = width * height * 4;
+    ref->build_mipmaps = true;
   }
 };
 
@@ -217,6 +219,7 @@ int main() {
     auto cur_time = std::chrono::system_clock::now();
     std::chrono::duration<float> delta = cur_time - prev_time;
     prev_time = cur_time;
+
     glfwPollEvents();
     cube.model = glm::rotate(cube.model, glm::radians(20 * delta.count()),
                              glm::fvec3(0, 1, 0));

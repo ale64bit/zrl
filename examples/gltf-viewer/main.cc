@@ -13,7 +13,10 @@
 #include "examples/gltf-viewer/gen.cc/PBR.h"
 #include "examples/gltf-viewer/gen.cc/Types.h"
 
+#include "camera.h"
 #include "gltf_binders.h"
+
+// TODO: modify the UIDs.
 
 std::string base_dir;
 
@@ -236,6 +239,23 @@ void AddNodes(const tinygltf::Model &model, const tinygltf::Node &node,
   }
 }
 
+std::tuple<double, double, double> HandleInput(GLFWwindow *window) {
+  static double last_x = 0, last_y = 0;
+
+  glfwPollEvents();
+  double cur_x, cur_y;
+  glfwGetCursorPos(window, &cur_x, &cur_y);
+  const double dx = cur_x - last_x;
+  const double dy = cur_y - last_y;
+  last_x = cur_x;
+  last_y = cur_y;
+
+  if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+    return std::make_tuple(.0, .0, dy);
+  }
+  return std::make_tuple(dx, dy, .0);
+}
+
 int main(int argc, char *argv[]) {
   if (argc == 1) {
     LOG(ERROR) << "usage: gltf_viewer <gltf_file>\n";
@@ -262,13 +282,14 @@ int main(int argc, char *argv[]) {
   LOG(INFO) << "main: creating renderer\n";
   const zrl::Config config{/* app_name */ "gltf-viewer",
                            /* engine_name */ "zrl",
-                           /* width */ 800,
-                           /* height */ 600,
+                           /* width */ 1920,
+                           /* height */ 1080,
                            /* fullscreen*/ false,
                            /* debug*/ true};
   zrl::Core core(config);
   PBR renderer(core);
   Global global;
+  Camera camera(30.0f);
   std::vector<Node> nodes;
 
   global.light.direction = glm::fvec3(0.0, -1.0, 0.0);
@@ -283,24 +304,19 @@ int main(int argc, char *argv[]) {
   for (int i : model.scenes[model.defaultScene].nodes) {
     AddNodes(model, model.nodes[i], glm::fmat4(1.0), nodes);
   }
-  DLOG << "node count: " << nodes.size() << "\n";
 
-  float K = 30.0f;
+  glfwSetInputMode(core.GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   while (!glfwWindowShouldClose(core.GetWindow())) {
-    glfwPollEvents();
-    if (glfwGetKey(core.GetWindow(), GLFW_KEY_A) == GLFW_PRESS) {
-      K -= 0.05f;
-    }
-    if (glfwGetKey(core.GetWindow(), GLFW_KEY_S) == GLFW_PRESS) {
-      K += 0.05f;
-    }
+    double dx, dy, dz;
+    std::tie(dx, dy, dz) = HandleInput(core.GetWindow());
+    camera.Update(dx, dy, dz);
 
-    glm::fmat4 proj =
-        glm::perspective(glm::radians(63.0f), 800 / 600.0f, 0.1f, 100.0f);
-    glm::fmat4 view = glm::lookAt(glm::fvec3(K, -K, -K), glm::fvec3(0, 0, 0),
-                                  glm::fvec3(0, -1, 0));
+    glm::fmat4 proj = glm::perspective(
+        glm::radians(63.0f), core.GetSwapchain().GetAspect(), 0.1f, 100.0f);
+    glm::fmat4 view = camera.View();
     global.projView = proj * view;
-    global.cameraPosition = glm::fvec4(K, -K, -K, 1);
+    global.cameraPosition = glm::fvec4(camera.Eye(), 1.0);
+
     renderer.Render(global, nodes);
   }
   return 0;

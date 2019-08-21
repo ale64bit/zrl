@@ -15,7 +15,7 @@ pipeline Draw(mvp: fmat4, tex: sampler2D): fvec4 {
 renderer Main() {
 
   def main(cube: atom) {
-    builtin.screen = fvec4(0.6, 0.6, 0.6, 1.0)
+    builtin.screen = fvec4(0.5, 0.5, 0.5, 1.0)
     builtin.screen += Draw(mvp=cube, tex=cube, pos=cube, uv=cube)
   }
 }

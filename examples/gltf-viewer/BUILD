@@ -9,6 +9,8 @@ zrl_library(
 cc_binary(
     name = "main",
     srcs = [
+        "camera.cc",
+        "camera.h",
         "gltf_binders.h",
         "main.cc",
     ],

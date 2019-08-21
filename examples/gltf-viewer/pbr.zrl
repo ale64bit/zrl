@@ -223,7 +223,7 @@ pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
       discard
     }
 
-    val f0 = fvec3(0.04, 0.04, 0.04)
+    val f0 = fvec3(0.04)
     var perceptualRoughness, metallic = 0.0, 0.0
     var baseColor = fvec4(0.0, 0.0, 0.0, 1.0)
     var diffuseColor, specularColor = fvec3(0.0, 0.0, 0.0), fvec3(0.0, 0.0, 0.0)
@@ -278,7 +278,7 @@ pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
 
     val normal = getNormal(pos, uv, tbn, nor)
     val view = normalize(g.cameraPosition.xyz - pos)
-    var color = fvec3(0.0, 0.0, 0.0)
+    var color = fvec3(0.0)
 
     if g.light.lightType == 0 {
       color += applyDirectionalLight(g.light, materialInfo, normal, view)
@@ -295,7 +295,8 @@ pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
       color += srgb2linear(texture(mat.emissive, uv)).rgb * mat.emissiveFactor
     }
     
-    color = toneMap(color)
+    // TODO(ale64bit): color = toneMap(color)
+    color = baseColor.xyz 
     return fvec4(color.r, color.g, color.b, baseColor.a)
   }
 }

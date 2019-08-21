@@ -58,6 +58,8 @@ void Attribute(const tinygltf::Model &model, int mesh, int primitive,
                const std::string &attribute, VkDeviceSize &size,
                void const **src) {
   const tinygltf::Primitive &p = model.meshes[mesh].primitives[primitive];
+  CHECK_PC(p.attributes.count(attribute),
+           "attribute '" + attribute + "' is required");
   const tinygltf::Accessor &accessor =
       model.accessors[p.attributes.at(attribute)];
   const tinygltf::BufferView &bufferView =
@@ -97,7 +99,7 @@ bool OptionalAttribute(const tinygltf::Model &model, int mesh, int primitive,
 
 void LoadTexture(const tinygltf::Model &model, const std::string &base_dir,
                  const tinygltf::Texture &tex,
-                 SampledImageReference &ref) noexcept {
+                 SampledImage2DReference &ref) noexcept {
   const tinygltf::Sampler sampler =
       (tex.sampler == -1) ? tinygltf::Sampler() : model.samplers[tex.sampler];
   const tinygltf::Image image = model.images[tex.source];
@@ -112,9 +114,12 @@ void LoadTexture(const tinygltf::Model &model, const std::string &base_dir,
   case TINYGLTF_TEXTURE_FILTER_LINEAR:
     ref.sampler_create_info.magFilter = VK_FILTER_LINEAR;
     break;
+  default:
+    ref.sampler_create_info.magFilter = VK_FILTER_LINEAR;
+    break;
   }
   ref.sampler_create_info.minLod = 0.0f;
-  ref.sampler_create_info.maxLod = 1.0f;
+  ref.sampler_create_info.maxLod = 0.0f;
   switch (sampler.minFilter) {
   case TINYGLTF_TEXTURE_FILTER_NEAREST:
     ref.sampler_create_info.minFilter = VK_FILTER_NEAREST;
@@ -141,6 +146,11 @@ void LoadTexture(const tinygltf::Model &model, const std::string &base_dir,
   case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
     ref.sampler_create_info.minFilter = VK_FILTER_LINEAR;
     ref.sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    break;
+  default:
+    ref.sampler_create_info.minFilter = VK_FILTER_LINEAR;
+    ref.sampler_create_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    ref.sampler_create_info.maxLod = 0.25f;
     break;
   }
   switch (sampler.wrapS) {
@@ -193,17 +203,16 @@ void LoadTexture(const tinygltf::Model &model, const std::string &base_dir,
   ref.format = VK_FORMAT_R8G8B8A8_UNORM;
   int width, height, channels;
   const std::string filepath = base_dir + "/" + image.uri;
-  ref.image_data =
-      stbi_load(filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-  CHECK_PC(ref.image_data != nullptr, "failed to load image: " + filepath);
+  ref.image_data.resize(1);
+  ref.image_data[0].push_back(
+      stbi_load(filepath.c_str(), &width, &height, &channels, STBI_rgb_alpha));
+  CHECK_PC(ref.image_data[0][0] != nullptr,
+           "failed to load image: " + filepath);
+  ref.size = width * height * 4;
   ref.width = static_cast<uint32_t>(width);
   ref.height = static_cast<uint32_t>(height);
   ref.channels = static_cast<uint32_t>(channels);
-  ref.size = width * height * 4;
-
   ref.build_mipmaps = true;
-  ref.sampler_create_info.maxLod =
-      std::floor(std::log2(std::max(width, height))) + 1;
 
   LOG(INFO) << "driver: loaded texture '" << filepath
             << "': width=" << ref.width << " height=" << ref.height
