@@ -9,7 +9,7 @@ Camera::Camera(float dist) : dist_(dist), target_(glm::fvec3(0)) {}
 void Camera::Update(float dx, float dy, float dz) {
   x_ -= dx * 0.01f;
   y_ -= dy * 0.01f;
-  dist_ += dz;
+  dist_ += dz * 0.1f;
 }
 
 glm::fvec3 Camera::Eye() const {

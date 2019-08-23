@@ -216,9 +216,7 @@ void LoadTexture(const tinygltf::Model &model, const std::string &base_dir,
 
   LOG(INFO) << "driver: loaded texture '" << filepath
             << "': width=" << ref.width << " height=" << ref.height
-            << " channels=" << ref.channels
-            << " mipmap_levels=" << (int(ref.sampler_create_info.maxLod))
-            << "\n";
+            << " channels=" << ref.channels << "\n";
 }
 
 } // namespace gltf

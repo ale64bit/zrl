@@ -2,19 +2,25 @@ load("//core:builddefs.bzl", "COPTS", "DEFINES")
 load("//core:zrl_library.bzl", "zrl_library")
 
 zrl_library(
-    name = "empty",
-    src = "empty.zrl",
+    name = "skybox",
+    src = "skybox.zrl",
 )
 
 cc_binary(
     name = "main",
     srcs = ["main.cc"],
     copts = COPTS,
-    defines = DEFINES,
+    data = ["//assets:images"],
+    defines = DEFINES + [
+        "STB_IMAGE_IMPLEMENTATION",
+        "ZRL_FRONT_FACE_COUNTER_CLOCKWISE",
+    ],
     deps = [
-        ":empty",
+        ":skybox",
         "//core",
+        "@glfw_repo//:glfw",
         "@glm",
+        "@stb//:stb_image",
         "@vulkan_repo//:sdk",
     ],
 )

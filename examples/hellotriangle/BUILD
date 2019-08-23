@@ -15,6 +15,7 @@ cc_binary(
         ":hellotriangle",
         "//core",
         "@glfw_repo//:glfw",
+        "@glm",
         "@vulkan_repo//:sdk",
     ],
 )
