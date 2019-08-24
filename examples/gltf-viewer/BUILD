@@ -9,8 +9,6 @@ zrl_library(
 cc_binary(
     name = "main",
     srcs = [
-        "camera.cc",
-        "camera.h",
         "gltf_binders.h",
         "main.cc",
     ],
@@ -24,6 +22,7 @@ cc_binary(
     deps = [
         ":pbr",
         "//core",
+        "//util:camera",
         "@glm",
         "@tinygltf",
         "@vulkan_repo//:sdk",

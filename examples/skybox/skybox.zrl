@@ -1,9 +1,9 @@
 module skybox
 
-pipeline Skybox(proj, model: fmat4, cubeMap: samplerCube): fvec4 {
+pipeline Skybox(proj, view, model: fmat4, cubeMap: samplerCube): fvec4 {
 
   def vertex(pos: fvec3): fvec3 {
-    builtin.position = proj * model * fvec4(pos, 1.0)
+    builtin.position = proj * view * model * fvec4(pos, 1.0)
     return pos
   }
 
@@ -14,8 +14,8 @@ pipeline Skybox(proj, model: fmat4, cubeMap: samplerCube): fvec4 {
 
 renderer Main() {
 
-  def main(proj, model: fmat4, cube: atom, cubeMap: atom) {
+  def main(proj, view, model: fmat4, cube: atom, cubeMap: atom) {
     builtin.screen = fvec4(0.0, 0.0, 0.0, 1.0)
-    builtin.screen += Skybox(proj=proj, model=model, cubeMap=cubeMap, pos=cube)
+    builtin.screen += Skybox(proj=proj, view=view, model=model, cubeMap=cubeMap, pos=cube)
   }
 }

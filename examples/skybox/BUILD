@@ -13,11 +13,11 @@ cc_binary(
     data = ["//assets:images"],
     defines = DEFINES + [
         "STB_IMAGE_IMPLEMENTATION",
-        "ZRL_FRONT_FACE_COUNTER_CLOCKWISE",
     ],
     deps = [
         ":skybox",
         "//core",
+        "//util:camera",
         "@glfw_repo//:glfw",
         "@glm",
         "@stb//:stb_image",

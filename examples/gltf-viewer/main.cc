@@ -3,6 +3,7 @@
 
 #include "core/Core.h"
 #include "core/Log.h"
+#include "util/camera.h"
 
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
@@ -13,7 +14,6 @@
 #include "examples/gltf-viewer/gen.cc/PBR.h"
 #include "examples/gltf-viewer/gen.cc/Types.h"
 
-#include "camera.h"
 #include "gltf_binders.h"
 
 // TODO: modify the UIDs.
@@ -245,8 +245,8 @@ std::tuple<double, double, double> HandleInput(GLFWwindow *window) {
   glfwPollEvents();
   double cur_x, cur_y;
   glfwGetCursorPos(window, &cur_x, &cur_y);
-  const double dx = cur_x - last_x;
-  const double dy = cur_y - last_y;
+  const double dx = (cur_x - last_x) * 0.1f;
+  const double dy = (cur_y - last_y) * 0.1f;
   last_x = cur_x;
   last_y = cur_y;
 

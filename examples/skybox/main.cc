@@ -3,6 +3,7 @@
 
 #include "core/Core.h"
 #include "core/Log.h"
+#include "util/camera.h"
 
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
@@ -96,12 +97,26 @@ template <> struct Skybox_cubeMap<Cube> {
     // Image
     ref->format = VK_FORMAT_R8G8B8A8_UNORM;
     int width, height, channels;
-    for (int i = 0; i < 6; ++i) {
-      auto data = stbi_load("assets/zrl-logo.png", &width, &height, &channels,
-                            STBI_rgb_alpha);
-      CHECK_PC(data != nullptr, "failed to load image");
-      ref->image_data[i] = data;
-    }
+
+    ref->image_data[0] = stbi_load("assets/sb_iceflow/iceflow_rt.tga", &width,
+                                   &height, &channels, STBI_rgb_alpha);
+    CHECK_PC(ref->image_data[0] != nullptr, "failed to load image");
+    ref->image_data[1] = stbi_load("assets/sb_iceflow/iceflow_lf.tga", &width,
+                                   &height, &channels, STBI_rgb_alpha);
+    CHECK_PC(ref->image_data[1] != nullptr, "failed to load image");
+    ref->image_data[2] = stbi_load("assets/sb_iceflow/iceflow_up.tga", &width,
+                                   &height, &channels, STBI_rgb_alpha);
+    CHECK_PC(ref->image_data[2] != nullptr, "failed to load image");
+    ref->image_data[3] = stbi_load("assets/sb_iceflow/iceflow_dn.tga", &width,
+                                   &height, &channels, STBI_rgb_alpha);
+    CHECK_PC(ref->image_data[3] != nullptr, "failed to load image");
+    ref->image_data[4] = stbi_load("assets/sb_iceflow/iceflow_bk.tga", &width,
+                                   &height, &channels, STBI_rgb_alpha);
+    CHECK_PC(ref->image_data[4] != nullptr, "failed to load image");
+    ref->image_data[5] = stbi_load("assets/sb_iceflow/iceflow_ft.tga", &width,
+                                   &height, &channels, STBI_rgb_alpha);
+    CHECK_PC(ref->image_data[5] != nullptr, "failed to load image");
+
     ref->size = width * height * 4;
     ref->width = static_cast<uint32_t>(width);
     ref->height = static_cast<uint32_t>(height);
@@ -128,6 +143,19 @@ template <> struct Skybox_pos<Cube> {
   }
 };
 
+std::tuple<double, double, double> HandleInput(GLFWwindow *window) {
+  static double last_x = 0, last_y = 0;
+
+  glfwPollEvents();
+  double cur_x, cur_y;
+  glfwGetCursorPos(window, &cur_x, &cur_y);
+  const double dx = (cur_x - last_x) * 0.1f;
+  const double dy = (cur_y - last_y) * 0.1f;
+  last_x = cur_x;
+  last_y = cur_y;
+  return std::make_tuple(dx, dy, .0);
+}
+
 int main() {
   const zrl::Config config{/* app_name */ "skybox",
                            /* engine_name */ "zrl",
@@ -140,6 +168,7 @@ int main() {
   glm::fmat4 proj =
       glm::perspective(glm::radians(63.0f), 800 / 600.0f, 0.1f, 100.0f);
   glm::fmat4 model = glm::fmat4(1.0);
+  Camera camera(0.01f);
 
   auto prev_time = std::chrono::system_clock::now();
   while (!glfwWindowShouldClose(core.GetWindow())) {
@@ -147,10 +176,11 @@ int main() {
     std::chrono::duration<float> delta = cur_time - prev_time;
     prev_time = cur_time;
 
-    glfwPollEvents();
-    model = glm::rotate(model, glm::radians(20 * delta.count()),
-                        glm::fvec3(0, 1, 0));
-    renderer.Render(proj, model, cube, cube);
+    double dx, dy, dz;
+    std::tie(dx, dy, dz) = HandleInput(core.GetWindow());
+    camera.Update(dx, dy, dz);
+
+    renderer.Render(proj, camera.View(), model, cube, cube);
   }
 
   return 0;

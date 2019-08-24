@@ -1,4 +1,4 @@
-#include "examples/gltf-viewer/camera.h"
+#include "util/camera.h"
 
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/quaternion.hpp"
@@ -9,9 +9,9 @@
 Camera::Camera(float dist) : dist_(dist), target_(glm::fvec3(0)) {}
 
 void Camera::Update(float dx, float dy, float dz) {
-  x_ -= dx * 0.1f;
-  y_ = std::max(std::min(y_ - dy * 0.1f, 89.f), -89.f);
-  dist_ = std::max(dist_ + dz * 0.1f, .0f);
+  x_ -= dx;
+  y_ = std::max(std::min(y_ - dy, 89.f), -89.f);
+  dist_ = std::max(dist_ + dz, .0f);
 }
 
 glm::fvec3 Camera::Eye() const {
