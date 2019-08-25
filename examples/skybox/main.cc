@@ -84,8 +84,8 @@ template <> struct Skybox_cubeMap<Cube> {
     ref->sampler_create_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     ref->sampler_create_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
     ref->sampler_create_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    ref->sampler_create_info.anisotropyEnable = VK_TRUE;
-    ref->sampler_create_info.maxAnisotropy = 8.0f;
+    ref->sampler_create_info.anisotropyEnable = VK_FALSE;
+    ref->sampler_create_info.maxAnisotropy = 0.0f;
     ref->sampler_create_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     ref->sampler_create_info.unnormalizedCoordinates = VK_FALSE;
     ref->sampler_create_info.compareEnable = VK_FALSE;
@@ -98,22 +98,22 @@ template <> struct Skybox_cubeMap<Cube> {
     ref->format = VK_FORMAT_R8G8B8A8_UNORM;
     int width, height, channels;
 
-    ref->image_data[0] = stbi_load("assets/sb_iceflow/iceflow_rt.tga", &width,
+    ref->image_data[0] = stbi_load("assets/textures/Yokohama3/posx.jpg", &width,
                                    &height, &channels, STBI_rgb_alpha);
     CHECK_PC(ref->image_data[0] != nullptr, "failed to load image");
-    ref->image_data[1] = stbi_load("assets/sb_iceflow/iceflow_lf.tga", &width,
+    ref->image_data[1] = stbi_load("assets/textures/Yokohama3/negx.jpg", &width,
                                    &height, &channels, STBI_rgb_alpha);
     CHECK_PC(ref->image_data[1] != nullptr, "failed to load image");
-    ref->image_data[2] = stbi_load("assets/sb_iceflow/iceflow_up.tga", &width,
+    ref->image_data[2] = stbi_load("assets/textures/Yokohama3/posy.jpg", &width,
                                    &height, &channels, STBI_rgb_alpha);
     CHECK_PC(ref->image_data[2] != nullptr, "failed to load image");
-    ref->image_data[3] = stbi_load("assets/sb_iceflow/iceflow_dn.tga", &width,
+    ref->image_data[3] = stbi_load("assets/textures/Yokohama3/negy.jpg", &width,
                                    &height, &channels, STBI_rgb_alpha);
     CHECK_PC(ref->image_data[3] != nullptr, "failed to load image");
-    ref->image_data[4] = stbi_load("assets/sb_iceflow/iceflow_bk.tga", &width,
+    ref->image_data[4] = stbi_load("assets/textures/Yokohama3/posz.jpg", &width,
                                    &height, &channels, STBI_rgb_alpha);
     CHECK_PC(ref->image_data[4] != nullptr, "failed to load image");
-    ref->image_data[5] = stbi_load("assets/sb_iceflow/iceflow_ft.tga", &width,
+    ref->image_data[5] = stbi_load("assets/textures/Yokohama3/negz.jpg", &width,
                                    &height, &channels, STBI_rgb_alpha);
     CHECK_PC(ref->image_data[5] != nullptr, "failed to load image");
 
@@ -159,14 +159,14 @@ std::tuple<double, double, double> HandleInput(GLFWwindow *window) {
 int main() {
   const zrl::Config config{/* app_name */ "skybox",
                            /* engine_name */ "zrl",
-                           /* width */ 800,
-                           /* height */ 600,
+                           /* width */ 1920,
+                           /* height */ 1080,
                            /* fullscreen*/ false,
                            /* debug*/ true};
   zrl::Core core(config);
   Main renderer(core);
-  glm::fmat4 proj =
-      glm::perspective(glm::radians(63.0f), 800 / 600.0f, 0.1f, 100.0f);
+  glm::fmat4 proj = glm::perspective(
+      glm::radians(63.0f), core.GetSwapchain().GetAspect(), 0.1f, 100.0f);
   glm::fmat4 model = glm::fmat4(1.0);
   Camera camera(0.01f);
 

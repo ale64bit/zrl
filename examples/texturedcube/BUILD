@@ -10,7 +10,7 @@ cc_binary(
     name = "main",
     srcs = ["main.cc"],
     copts = COPTS,
-    data = ["//assets:images"],
+    data = ["//assets"],
     defines = DEFINES + [
         "STB_IMAGE_IMPLEMENTATION",
     ],

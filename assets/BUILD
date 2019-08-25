@@ -1,9 +1,9 @@
 filegroup(
-    name = "images",
+    name = "assets",
     srcs = glob([
-        "*.jpg",
-        "*.png",
-        "sb_iceflow/*.tga",
+        "**/*.jpg",
+        "**/*.png",
+        "**/*.tga",
     ]),
     visibility = ["//visibility:public"],
 )
