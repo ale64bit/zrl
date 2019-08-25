@@ -32,21 +32,15 @@ cc_library(
 
 def _vulkan_repo_impl(repository_ctx):
     os_name = repository_ctx.os.name.lower()
-    env_cmd = []
     build_contents = ""
     if os_name.find("linux") != -1:
-        env_cmd = ["printenv", "VULKAN_SDK_PATH"]
         build_contents = _BUILD_CONTENTS_LINUX
     elif os_name.find("windows") != -1:
-        env_cmd = ["echo", "$Env:VULKAN_SDK_PATH"]
         build_contents = _BUILD_CONTENTS_WINDOWS
     else:
         fail("Unsupported operating system: " + os_name)
 
-    result = repository_ctx.execute(env_cmd)
-    if result.return_code:
-        fail("VULKAN_SDK_PATH environment variable must be set")
-    vulkan_path = result.stdout.splitlines()[0]
+    vulkan_path = repository_ctx.os.environ["VULKAN_SDK_PATH"]
     if vulkan_path == "":
         fail("VULKAN_SDK_PATH environment variable must be set")
     repository_ctx.symlink(vulkan_path, "vulkan")

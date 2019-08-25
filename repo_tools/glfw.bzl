@@ -34,10 +34,7 @@ cc_library(
 """
 
 def _glfw_repo_linux(repository_ctx):
-    result = repository_ctx.execute(["printenv", "GLFW_PATH"])
-    if result.return_code:
-        fail("GLFW_PATH environment variable must be set")
-    glfw_path = result.stdout.splitlines()[0]
+    glfw_path = repository_ctx.os.environ["GLFW_PATH"]
     if glfw_path == "":
         fail("GLFW_PATH environment variable must be set")
     repository_ctx.symlink(glfw_path, "glfw")
@@ -49,10 +46,7 @@ def _glfw_repo_linux(repository_ctx):
     repository_ctx.file("BUILD", ("_LINKOPTS=%s\n" % str(linkopts)) + _BUILD_CONTENTS_LINUX)
 
 def _glfw_repo_windows(repository_ctx):
-    result = repository_ctx.execute(["echo", "$Env:GLFW_PATH"])
-    if result.return_code:
-        fail("GLFW_PATH environment variable must be set")
-    glfw_path = result.stdout.splitlines()[0]
+    glfw_path = repository_ctx.os.environ["GLFW_PATH"]
     if glfw_path == "":
         fail("GLFW_PATH environment variable must be set")
     repository_ctx.symlink(glfw_path, "glfw")

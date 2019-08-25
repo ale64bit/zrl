@@ -33,3 +33,15 @@ cc_library(
         "@vulkan_repo//:sdk",
     ],
 )
+
+py_binary(
+    name = "build_shaders",
+    srcs = ["build_shaders.py"],
+    visibility = ["//visibility:public"],
+)
+
+py_binary(
+    name = "collect_sources",
+    srcs = ["collect_sources.py"],
+    visibility = ["//visibility:public"],
+)

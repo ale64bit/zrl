@@ -25,24 +25,29 @@ def _zrl_library_internal_impl(ctx):
         )
 
     shader_include_tree = ctx.actions.declare_directory("shader_include")
-
-    # TODO(ale64bit): implement the equivalent Windows command.
-    compile_shaders_cmd = 'shopt -s nullglob && for i in %s/*.glsl; do %s -V "$i" --vn "k$(basename $i | tr . _)_" -o "%s/$(basename $i).h"; done' % (shader_tree.path, ctx.executable._glsl_compiler.path, shader_include_tree.path)
-    ctx.actions.run_shell(
+    ctx.actions.run(
         inputs = [shader_tree],
         outputs = [shader_include_tree],
+        executable = ctx.executable._build_shaders,
         tools = [ctx.executable._glsl_compiler],
-        command = compile_shaders_cmd,
+        arguments = [
+            ctx.executable._glsl_compiler.path,
+            shader_tree.path,
+            shader_include_tree.path,
+        ],
     )
 
     gen_tree = ctx.actions.declare_directory("gen.cc")
-
-    # TODO(ale64bit): implement the equivalent Windows command.
-    collect_sources_cmd = 'shopt -s nullglob && for i in %s/*.cc %s/*.h %s/*.h; do cp "$i" "%s/$(basename $i)"; done' % (src_tree.path, include_tree.path, shader_include_tree.path, gen_tree.path)
-    ctx.actions.run_shell(
+    ctx.actions.run(
         inputs = [shader_include_tree, include_tree, src_tree],
         outputs = [gen_tree],
-        command = collect_sources_cmd,
+        executable = ctx.executable._collect_sources,
+        arguments = [
+            gen_tree.path,
+            src_tree.path,
+            include_tree.path,
+            shader_include_tree.path,
+        ],
     )
 
     return [DefaultInfo(files = depset([gen_tree]))]
@@ -64,6 +69,16 @@ _zrl_library_internal = rule(
             allow_single_file = True,
             executable = True,
             default = "@vulkan_repo//:glsl_compiler",
+        ),
+        "_build_shaders": attr.label(
+            cfg = "host",
+            executable = True,
+            default = "//core:build_shaders",
+        ),
+        "_collect_sources": attr.label(
+            cfg = "host",
+            executable = True,
+            default = "//core:collect_sources",
         ),
     },
     implementation = _zrl_library_internal_impl,
