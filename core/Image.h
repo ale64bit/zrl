@@ -29,7 +29,7 @@ public:
                                         VkFormat format,
                                         VkImageUsageFlags usage);
   static std::unique_ptr<Image> CubeMap(const Core &core, VkExtent2D extent,
-                                        VkFormat format,
+                                        uint32_t levels, VkFormat format,
                                         VkImageUsageFlags usage);
   static std::unique_ptr<Image> DepthBuffer(const Core &core, VkExtent2D extent,
                                             VkFormat format,

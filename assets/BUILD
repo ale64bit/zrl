@@ -4,6 +4,7 @@ filegroup(
         "**/*.jpg",
         "**/*.png",
         "**/*.tga",
+        "**/*.hdr",
     ]),
     visibility = ["//visibility:public"],
 )

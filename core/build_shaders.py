@@ -21,7 +21,7 @@ def main():
         "-o",
         os.path.join(output_dir, os.path.basename(input_file) + ".h"),
     ]
-    code = subprocess.call(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    code = subprocess.call(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if code != 0:
       sys.exit(code)
 

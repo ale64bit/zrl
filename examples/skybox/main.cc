@@ -98,24 +98,27 @@ template <> struct Skybox_cubeMap<Cube> {
     ref->format = VK_FORMAT_R8G8B8A8_UNORM;
     int width, height, channels;
 
-    ref->image_data[0] = stbi_load("assets/textures/Yokohama3/posx.jpg", &width,
-                                   &height, &channels, STBI_rgb_alpha);
-    CHECK_PC(ref->image_data[0] != nullptr, "failed to load image");
-    ref->image_data[1] = stbi_load("assets/textures/Yokohama3/negx.jpg", &width,
-                                   &height, &channels, STBI_rgb_alpha);
-    CHECK_PC(ref->image_data[1] != nullptr, "failed to load image");
-    ref->image_data[2] = stbi_load("assets/textures/Yokohama3/posy.jpg", &width,
-                                   &height, &channels, STBI_rgb_alpha);
-    CHECK_PC(ref->image_data[2] != nullptr, "failed to load image");
-    ref->image_data[3] = stbi_load("assets/textures/Yokohama3/negy.jpg", &width,
-                                   &height, &channels, STBI_rgb_alpha);
-    CHECK_PC(ref->image_data[3] != nullptr, "failed to load image");
-    ref->image_data[4] = stbi_load("assets/textures/Yokohama3/posz.jpg", &width,
-                                   &height, &channels, STBI_rgb_alpha);
-    CHECK_PC(ref->image_data[4] != nullptr, "failed to load image");
-    ref->image_data[5] = stbi_load("assets/textures/Yokohama3/negz.jpg", &width,
-                                   &height, &channels, STBI_rgb_alpha);
-    CHECK_PC(ref->image_data[5] != nullptr, "failed to load image");
+    ref->image_data[0].push_back(stbi_load("assets/textures/Yokohama3/posx.jpg",
+                                           &width, &height, &channels,
+                                           STBI_rgb_alpha));
+    ref->image_data[1].push_back(stbi_load("assets/textures/Yokohama3/negx.jpg",
+                                           &width, &height, &channels,
+                                           STBI_rgb_alpha));
+    ref->image_data[2].push_back(stbi_load("assets/textures/Yokohama3/posy.jpg",
+                                           &width, &height, &channels,
+                                           STBI_rgb_alpha));
+    ref->image_data[3].push_back(stbi_load("assets/textures/Yokohama3/negy.jpg",
+                                           &width, &height, &channels,
+                                           STBI_rgb_alpha));
+    ref->image_data[4].push_back(stbi_load("assets/textures/Yokohama3/posz.jpg",
+                                           &width, &height, &channels,
+                                           STBI_rgb_alpha));
+    ref->image_data[5].push_back(stbi_load("assets/textures/Yokohama3/negz.jpg",
+                                           &width, &height, &channels,
+                                           STBI_rgb_alpha));
+    for (int i = 0; i < 6; ++i) {
+      CHECK_PC(ref->image_data[i][0] != nullptr, "failed to load image");
+    }
 
     ref->size = width * height * 4;
     ref->width = static_cast<uint32_t>(width);

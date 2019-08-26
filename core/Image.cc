@@ -99,13 +99,13 @@ std::unique_ptr<Image> Image::Image3D(const Core &core, VkExtent3D extent,
 }
 
 std::unique_ptr<Image> Image::CubeMap(const Core &core, VkExtent2D extent,
-                                      VkFormat format,
+                                      uint32_t levels, VkFormat format,
                                       VkImageUsageFlags usage) {
   VkExtent3D extent3D{extent.width, extent.height, 1};
   return std::unique_ptr<Image>(new Image(
-      core, extent3D, 1, 6, format, VK_IMAGE_TYPE_2D, VK_IMAGE_VIEW_TYPE_CUBE,
-      VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      VK_IMAGE_ASPECT_COLOR_BIT));
+      core, extent3D, levels, 6, format, VK_IMAGE_TYPE_2D,
+      VK_IMAGE_VIEW_TYPE_CUBE, VK_IMAGE_TILING_OPTIMAL, usage,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_ASPECT_COLOR_BIT));
 }
 
 std::unique_ptr<Image> Image::DepthBuffer(const Core &core, VkExtent2D extent,

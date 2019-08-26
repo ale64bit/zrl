@@ -36,6 +36,140 @@ template <> struct ForwardPass_g<Global> {
   }
 };
 
+template <> struct ForwardPass_env<std::string> {
+
+  void SetSampler(VkSamplerCreateInfo &info) const {
+    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    info.pNext = nullptr;
+    info.flags = 0;
+    info.magFilter = VK_FILTER_LINEAR;
+    info.minFilter = VK_FILTER_LINEAR;
+    info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    info.minLod = 0.0f;
+    info.maxLod = 0.0f;
+    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    info.anisotropyEnable = VK_TRUE;
+    info.maxAnisotropy = 8.0f;
+    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    info.unnormalizedCoordinates = VK_FALSE;
+    info.compareEnable = VK_FALSE;
+    info.compareOp = VK_COMPARE_OP_ALWAYS;
+    info.mipLodBias = 0.0f;
+  }
+
+  void LoadTexture(const std::string &filepath,
+                   SampledImage2DReference &ref) const {
+    int width, height, channels;
+    ref.format = VK_FORMAT_R8G8B8A8_UNORM;
+    ref.image_data.resize(1);
+    ref.image_data[0].push_back(stbi_load(filepath.c_str(), &width, &height,
+                                          &channels, STBI_rgb_alpha));
+    CHECK_PC(ref.image_data[0][0] != nullptr,
+             "failed to load image: " + filepath);
+    ref.size = width * height * 4;
+    ref.width = static_cast<uint32_t>(width);
+    ref.height = static_cast<uint32_t>(height);
+    ref.channels = static_cast<uint32_t>(channels);
+    ref.build_mipmaps = false;
+
+    LOG(INFO) << "main: loaded texture '" << filepath
+              << "': width=" << ref.width << " height=" << ref.height
+              << " channels=" << ref.channels << "\n";
+  }
+
+  bool LevelExist(const std::string &name, const std::string &kind,
+                  int level) const {
+    const std::string filename = "assets/textures/" + name + "/" + kind + "/" +
+                                 kind + "_front_" + std::to_string(level) +
+                                 ".hdr";
+    if (FILE *f = fopen(filename.c_str(), "r")) {
+      fclose(f);
+      return true;
+    }
+    return false;
+  }
+
+  void LoadEnvCubeMaps(const std::string &name,
+                       SampledCubeMapReference &diffuse,
+                       SampledCubeMapReference &specular) const {
+    constexpr std::array<const char *, 6> kFaceNames = {
+        "front", "back", "top", "bottom", "left", "right",
+    };
+
+    // Diffuse environment map.
+    diffuse.format = VK_FORMAT_R8G8B8A8_UNORM;
+    int mip_levels = 1;
+    while (LevelExist(name, "diffuse", mip_levels)) {
+      ++mip_levels;
+    }
+    for (int layer = 0; layer < 6; ++layer) {
+      for (int level = 0; level < mip_levels; ++level) {
+        int width, height, channels;
+        const std::string filename = "assets/textures/" + name +
+                                     "/diffuse/diffuse_" + kFaceNames[layer] +
+                                     "_" + std::to_string(level) + ".hdr";
+        diffuse.image_data[layer].push_back(stbi_load(
+            filename.c_str(), &width, &height, &channels, STBI_rgb_alpha));
+        CHECK_PC(diffuse.image_data[layer][level] != nullptr,
+                 "failed to load image: " + filename);
+        if (layer == 0 && level == 0) {
+          diffuse.width = static_cast<uint32_t>(width);
+          diffuse.height = static_cast<uint32_t>(height);
+          diffuse.channels = static_cast<uint32_t>(channels);
+        }
+      }
+    }
+    diffuse.size = diffuse.width * diffuse.height * 4;
+    LOG(INFO) << "main: loaded diffuse env cubemap '" << name
+              << "': width=" << diffuse.width << " height=" << diffuse.height
+              << " channels=" << diffuse.channels << " levels=" << mip_levels
+              << "\n";
+
+    // Specular environment map.
+    specular.format = VK_FORMAT_R8G8B8A8_UNORM;
+    mip_levels = 1;
+    while (LevelExist(name, "specular", mip_levels)) {
+      ++mip_levels;
+    }
+    for (int layer = 0; layer < 6; ++layer) {
+      for (int level = 0; level < mip_levels; ++level) {
+        int width, height, channels;
+        const std::string filename = "assets/textures/" + name +
+                                     "/specular/specular_" + kFaceNames[layer] +
+                                     "_" + std::to_string(level) + ".hdr";
+        specular.image_data[layer].push_back(stbi_load(
+            filename.c_str(), &width, &height, &channels, STBI_rgb_alpha));
+        CHECK_PC(specular.image_data[layer][level] != nullptr,
+                 "failed to load image: " + filename);
+        if (layer == 0 && level == 0) {
+          specular.width = static_cast<uint32_t>(width);
+          specular.height = static_cast<uint32_t>(height);
+          specular.channels = static_cast<uint32_t>(channels);
+        }
+      }
+    }
+    specular.size = specular.width * specular.height * 4;
+    LOG(INFO) << "main: loaded specular env cubemap '" << name
+              << "': width=" << specular.width << " height=" << specular.height
+              << " channels=" << specular.channels << " levels=" << mip_levels
+              << "\n";
+  }
+
+  void operator()(const std::string &name, uint32_t &uid,
+                  Environment *data) const noexcept {
+    uid = 1 << 30;
+    if (data != nullptr) {
+      SetSampler(data->diffuse.sampler_create_info);
+      SetSampler(data->specular.sampler_create_info);
+      LoadEnvCubeMaps(name, data->diffuse, data->specular);
+      SetSampler(data->brdfLUT.sampler_create_info);
+      LoadTexture("assets/textures/brdfLUT.png", data->brdfLUT);
+    }
+  }
+};
+
 template <> struct ForwardPass_mat<Node> {
   void operator()(const Node &node, uint32_t &uid, Material *m) const noexcept {
     const tinygltf::Primitive &p =
@@ -119,6 +253,7 @@ template <> struct ForwardPass_obj<Node> {
       data->model = node.model;
       data->normalMat = glm::transpose(glm::affineInverse(node.model));
       data->hasColor = p.attributes.count("COLOR") != 0;
+      data->hasNormal = p.attributes.count("NORMAL") != 0;
       data->hasTangent = p.attributes.count("TANGENT") != 0;
     }
   }
@@ -164,10 +299,12 @@ template <> struct ForwardPass_position<Node> {
 template <> struct ForwardPass_normal<Node> {
   void operator()(const Node &node, uint32_t &uid, void const **src,
                   VkDeviceSize &size) const noexcept {
-    uid = (node.mesh << 20) + (node.primitive << 10) + 3;
-    zrl::support::gltf::Attribute<TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                  TINYGLTF_TYPE_VEC3>(
-        node.m, node.mesh, node.primitive, "NORMAL", size, src);
+    uid = 0;
+    if (zrl::support::gltf::OptionalAttribute<TINYGLTF_COMPONENT_TYPE_FLOAT,
+                                              TINYGLTF_TYPE_VEC3>(
+            node.m, node.mesh, node.primitive, "NORMAL", size, src)) {
+      uid = (node.mesh << 20) + (node.primitive << 10) + 3;
+    }
   }
 };
 
@@ -239,7 +376,7 @@ void AddNodes(const tinygltf::Model &model, const tinygltf::Node &node,
   }
 }
 
-std::tuple<double, double, double> HandleInput(GLFWwindow *window) {
+std::tuple<double, double, double> HandleInput(GLFWwindow *window, int &mode) {
   static double last_x = 0, last_y = 0;
 
   glfwPollEvents();
@@ -249,6 +386,22 @@ std::tuple<double, double, double> HandleInput(GLFWwindow *window) {
   const double dy = (cur_y - last_y) * 0.1f;
   last_x = cur_x;
   last_y = cur_y;
+
+  if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS) {
+    mode = 0;
+  } else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+    mode = 1;
+  } else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+    mode = 2;
+  } else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+    mode = 3;
+  } else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
+    mode = 4;
+  } else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
+    mode = 5;
+  } else if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
+    mode = 6;
+  }
 
   if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
     return std::make_tuple(.0, .0, dy);
@@ -292,23 +445,52 @@ int main(int argc, char *argv[]) {
   Camera camera(30.0f);
   std::vector<Node> nodes;
 
-  global.light.direction = glm::fvec3(0.0, -1.0, 0.0);
-  global.light.range = -1;
-  global.light.color = glm::fvec3(1, 1, 1);
-  global.light.intensity = 2;
-  global.light.position = glm::fvec3(0, 0, 0);
-  global.light.innerConeCos = 0;
-  global.light.outerConeCos = M_PI / 4;
-  global.light.lightType = 0; // directional
+  // global.lights[0].direction = glm::fvec3(0.0, -1.0, 0.1);
+  // global.lights[0].range = -1;
+  // global.lights[0].color = glm::fvec3(1, 1, 1);
+  // global.lights[0].intensity = 0.8;
+  // global.lights[0].position = glm::fvec3(4, 0, 4);
+  // global.lights[0].innerConeCos = 0;
+  // global.lights[0].outerConeCos = M_PI / 4;
+  // global.lights[0].lightType = 0; // directional
+
+  // global.lights[1].direction = glm::fvec3(0.0, 1.0, -1.1);
+  // global.lights[1].range = -1;
+  // global.lights[1].color = glm::fvec3(1, 1, 1);
+  // global.lights[1].intensity = 0.8;
+  // global.lights[1].position = glm::fvec3(4, 0, 4);
+  // global.lights[1].innerConeCos = 0;
+  // global.lights[1].outerConeCos = M_PI / 4;
+  // global.lights[1].lightType = 0; // directional
+
+  // global.lights[2].direction = glm::fvec3(1.0, -1.0, 0.1);
+  // global.lights[2].range = -1;
+  // global.lights[2].color = glm::fvec3(1, 1, 1);
+  // global.lights[2].intensity = 0.8;
+  // global.lights[2].position = glm::fvec3(4, 4, 0);
+  // global.lights[2].innerConeCos = 0;
+  // global.lights[2].outerConeCos = M_PI / 4;
+  // global.lights[2].lightType = 0; // directional
+
+  // global.lights[3].direction = glm::fvec3(1.0, 1.0, 1.1);
+  // global.lights[3].range = -1;
+  // global.lights[3].color = glm::fvec3(1, 1, 1);
+  // global.lights[3].intensity = 0.8;
+  // global.lights[3].position = glm::fvec3(0, 4, 4);
+  // global.lights[3].innerConeCos = 0;
+  // global.lights[3].outerConeCos = M_PI / 4;
+  // global.lights[3].lightType = 0; // directional
 
   for (int i : model.scenes[model.defaultScene].nodes) {
     AddNodes(model, model.nodes[i], glm::fmat4(1.0), nodes);
   }
 
+  const std::string env_name = "studio_grey";
+
   glfwSetInputMode(core.GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   while (!glfwWindowShouldClose(core.GetWindow())) {
     double dx, dy, dz;
-    std::tie(dx, dy, dz) = HandleInput(core.GetWindow());
+    std::tie(dx, dy, dz) = HandleInput(core.GetWindow(), global.debugMode);
     camera.Update(dx, dy, dz);
 
     glm::fmat4 proj = glm::perspective(
@@ -317,7 +499,7 @@ int main(int argc, char *argv[]) {
     global.projView = proj * view;
     global.cameraPosition = glm::fvec4(camera.Eye(), 1.0);
 
-    renderer.Render(global, nodes);
+    renderer.Render(global, env_name, nodes);
   }
   return 0;
 }

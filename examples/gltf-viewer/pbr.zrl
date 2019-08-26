@@ -2,9 +2,17 @@
 // https://github.com/KhronosGroup/glTF-Sample-Viewer
 module pbr
 
+const kDebugModeColor = 1
+const kDebugModeNormal = 2
+const kDebugModeMetallic = 3
+const kDebugModeRoughness = 4
+const kDebugModeOcclusion = 5
+const kDebugModeEmissive = 6
+
+const kLightCount = 1
 const kGamma = 2.2
-const kPI = 3.141592653589793
-const kExposure = 4.5
+const kPI = 3.1415926535897932384626433832795
+const kExposure = 1.0
 
 type Light {
   direction: fvec3
@@ -21,7 +29,14 @@ type Light {
 type Global {
   projView: fmat4
   cameraPosition: fvec4
-  light: Light
+  lights: [kLightCount]Light
+  debugMode: int
+}
+
+type Environment {
+  diffuse: samplerCube
+  specular: samplerCube
+  brdfLUT: sampler2D
 }
 
 type Material {
@@ -40,6 +55,7 @@ type PerObject {
   model: fmat4
   normalMat: fmat4
   hasColor: bool
+  hasNormal: bool
   hasTangent: bool
 }
 
@@ -60,7 +76,37 @@ type MaterialInfo {
   specularColor: fvec3       // color contribution from specular lighting
 }
 
-pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
+pipeline ForwardPass(g: Global, env: Environment, mat: Material, obj: PerObject): (fvec4, float) {
+
+  // See https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/primitive.vert
+  def vertex(position, normal, color: fvec3, tangent: fvec4, uv: fvec2): (fvec3, fvec2, fvec4, fmat3, fvec3) {
+    val pos = obj.model * fvec4(position, 1.0)
+    builtin.position = g.projView * pos
+    val outPos = pos.xyz / pos.w
+
+    var vertexColor = fvec4(1.0, 1.0, 1.0, 1.0)
+    if obj.hasColor {
+      vertexColor = fvec4(color, 1.0)
+    }
+
+    if obj.hasNormal {
+      if obj.hasTangent {
+        tangent = normalize(tangent)
+        val normalW = normalize((obj.normalMat * fvec4(normal, 0.0)).xyz)
+        val tangentW = normalize((obj.model * fvec4(tangent.xyz, 0.0)).xyz)
+        val bitangentW = cross(normalW, tangentW) * tangent.w
+        val tbn = fmat3(tangentW, bitangentW, normalW)
+        val outNormal = fvec3(0.0)
+        return outPos, uv, vertexColor, tbn, outNormal
+      } else {
+        val tbn = fmat3(1.0)
+        val outNormal = normalize((obj.normalMat * fvec4(normal, 0.0)).xyz)
+        return outPos, uv, vertexColor, tbn, outNormal
+      }
+    } 
+
+    return outPos, uv, vertexColor, fmat3(1.0), fvec3(0.0)
+  }
 
   // See http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
   def linear2srgb(color: fvec3): fvec3 {
@@ -74,45 +120,31 @@ pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
     return fvec4(v, color.w)
   }
 
-  def computeTransforms(normal: fvec3, tangent: fvec4): (fvec3, fmat3) {
-    val zero = fvec3(0.0)
-    normal = normalize(normal)
-    val augNor = fvec4(normal.x, normal.y, normal.z, 0.0)
-    if obj.hasTangent {
-      val norTan = normalize(fvec3(tangent.x, tangent.y, tangent.z))
-      val augTan = fvec4(norTan.x, norTan.y, norTan.z, 0.0)
-      val normalW = normalize((obj.normalMat * augNor).xyz)
-      val tangentW = normalize((obj.model * augTan).xyz)
-      val bitangentW = cross(normalW, tangentW) * tangent.w
-      return zero, fmat3(tangentW, bitangentW, normalW)
-    } else {
-      val nor = normalize((obj.normalMat * augNor).xyz)
-      return nor, fmat3(zero, zero, zero) 
-    }
-  }
-
-  // See https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/primitive.vert
-  def vertex(position, normal, color: fvec3, tangent: fvec4, uv: fvec2): (fvec3, fvec3, fvec4, fmat3, fvec2) {
-    val augPos = fvec4(position.x, position.y, position.z, 1.0)
-    var locPos = obj.model * augPos
-    // locPos.y = -locPos.y
-    val outWorldPos = locPos.xyz / locPos.w
-    val nor, tbn = computeTransforms(normal, tangent)
-    var vertexColor = fvec4(1.0, 1.0, 1.0, 1.0)
-    if obj.hasColor {
-      vertexColor = fvec4(color.x, color.y, color.z, 1.0)
-    }
-    builtin.position = g.projView * fvec4(outWorldPos.x, outWorldPos.y, outWorldPos.z, 1.0)
-    return outWorldPos, nor, vertexColor, tbn, uv
-  }
 
   def getNormal(pos: fvec3, uv: fvec2, tbn: fmat3, nor: fvec3): fvec3 {
+    if !obj.hasTangent {
+      val pos_dx = dFdx(pos)
+      val pos_dy = dFdy(pos)
+      val tex_dx = dFdx(fvec3(uv, 0.0))
+      val tex_dy = dFdy(fvec3(uv, 0.0))
+
+      var t = (tex_dy.t * pos_dx - tex_dx.t * pos_dy) / (tex_dx.s * tex_dy.t - tex_dy.s * tex_dx.t)
+      var ng = fvec3(0.0)
+      if obj.hasNormal {
+        ng = normalize(nor)
+      } else {
+        ng = cross(pos_dx, pos_dy)
+      }
+      t = normalize(t - ng * dot(ng, t))
+      val b = normalize(cross(ng, t))
+      tbn = fmat3(t, b, ng)
+    }
+
     if mat.hasNormal {
       val n = texture(mat.normal, uv).rgb
       return normalize(tbn * ((2.0 * n - 1.0) * fvec3(mat.normalScale, mat.normalScale, 1.0)))
     } else {
-      val n = fvec3(tbn[2,0], tbn[2,1], tbn[2,2])
-      return normalize(n)
+      return normalize(tbn[2].xyz)
     }
   }
 
@@ -128,6 +160,22 @@ pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
         NdotH = clamp(dot(n, h), 0.0, 1.0),
         LdotH = clamp(dot(l, h), 0.0, 1.0),
         VdotH = clamp(dot(v, h), 0.0, 1.0))
+  }
+
+  def getIBLContribution(materialInfo: MaterialInfo, n: fvec3, v: fvec3): fvec3 {
+    val NdotV = clamp(dot(n, v), 0.0, 1.0)
+    val reflection = normalize(reflect(-v, n))
+    val brdfSamplePoint = clamp(fvec2(NdotV, materialInfo.perceptualRoughness), fvec2(0.0), fvec2(1.0))
+
+    val brdf = texture(env.brdfLUT, brdfSamplePoint).rg
+    val diffuseSample = texture(env.diffuse, n)
+    val specularSample = texture(env.specular, reflection)
+    
+    val diffuseLight, specularLight = srgb2linear(diffuseSample).rgb, srgb2linear(specularSample).rgb
+    val diffuse = diffuseLight * materialInfo.diffuseColor
+    val specular = specularLight * (materialInfo.specularColor * brdf.x + brdf.y)
+
+    return diffuse + specular
   }
 
   // Lambert lighting
@@ -212,13 +260,18 @@ pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
     return attenuation * l.intensity * l.color * shade
   }
 
+  def toneMapHejlRichard(color: fvec3): fvec3 {
+    color = max(fvec3(0.0), color - fvec3(0.004))
+    return (color*(6.2*color+0.5))/(color*(6.2*color+1.7)+0.06)
+  }
+
   def toneMap(color: fvec3): fvec3 {
     color *= kExposure
-    return linear2srgb(color)
+    return toneMapHejlRichard(color) 
   }
 
   // See https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/metallic-roughness.frag
-  def fragment(pos, nor: fvec3, vertexColor: fvec4, tbn: fmat3, uv: fvec2): fvec4 {
+  def fragment(pos: fvec3, uv: fvec2, vertexColor: fvec4, tbn: fmat3, nor: fvec3): fvec4 {
     if builtin.currentDepth < builtin.fragCoord.z {
       discard
     }
@@ -226,7 +279,7 @@ pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
     val f0 = fvec3(0.04)
     var perceptualRoughness, metallic = 0.0, 0.0
     var baseColor = fvec4(0.0, 0.0, 0.0, 1.0)
-    var diffuseColor, specularColor = fvec3(0.0, 0.0, 0.0), fvec3(0.0, 0.0, 0.0)
+    var diffuseColor, specularColor = fvec3(0.0), fvec3(0.0)
 
     if mat.hasMetallicRoughness {
       val mrSample = texture(mat.metallicRoughness, uv)
@@ -243,27 +296,36 @@ pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
       baseColor = mat.baseColorFactor
     }
 
+    if g.debugMode == kDebugModeColor {
+      return baseColor
+    }
+
     baseColor *= vertexColor
     diffuseColor = baseColor.rgb * (1.0-f0) * (1.0-metallic)
     specularColor = mix(f0, baseColor.rgb, metallic)
 
     if mat.alphaMode == 0 { // OPAQUE
       baseColor.a = 1.0
-    } else { 
-      if mat.alphaMode == 1 { // MASK
-        if baseColor.a < mat.alphaCutoff { discard }
-        baseColor.a = 1.0
-      }
+    }
+    if mat.alphaMode == 1 { // MASK
+      if baseColor.a < mat.alphaCutoff { discard }
+      baseColor.a = 1.0
     }
 
     perceptualRoughness = clamp(perceptualRoughness, 0.0, 1.0)
     metallic = clamp(metallic, 0.0, 1.0)
 
+    if g.debugMode == kDebugModeMetallic {
+      return fvec4(fvec3(metallic), 1.0)
+    }
+    if g.debugMode == kDebugModeRoughness {
+      return fvec4(fvec3(perceptualRoughness), 1.0)
+    }
+
     val alphaRoughness = perceptualRoughness * perceptualRoughness
     val reflectance = max(max(specularColor.r, specularColor.g), specularColor.b)
     val specularEnvironmentR0 = specularColor.rgb
-    val refl2 = clamp(reflectance * 50.0, 0.0, 1.0)
-    val specularEnvironmentR90 = fvec3(refl2, refl2, refl2)
+    val specularEnvironmentR90 = fvec3(clamp(reflectance * 50.0, 0.0, 1.0))
     
     val materialInfo = MaterialInfo(
         perceptualRoughness,
@@ -277,37 +339,49 @@ pipeline ForwardPass(g: Global, mat: Material, obj: PerObject): (fvec4, float) {
     // Lighting
 
     val normal = getNormal(pos, uv, tbn, nor)
+    if g.debugMode == kDebugModeNormal {
+      return fvec4(normal, 1.0)
+    }
     val view = normalize(g.cameraPosition.xyz - pos)
     var color = fvec3(0.0)
 
-    if g.light.lightType == 0 {
-      color += applyDirectionalLight(g.light, materialInfo, normal, view)
-    }
-    if g.light.lightType == 1 {
-      color += applyPointLight(g.light, materialInfo, pos, normal, view)
+    for i = 0 to (kLightCount-1) {
+      if g.lights[i].lightType == 0 {
+        color += applyDirectionalLight(g.lights[i], materialInfo, normal, view)
+      }
+      if g.lights[i].lightType == 1 {
+        color += applyPointLight(g.lights[i], materialInfo, pos, normal, view)
+      }
     }
 
+    color += getIBLContribution(materialInfo, normal, view)
+
     if mat.hasOcclusion {
+      if g.debugMode == kDebugModeOcclusion {
+        return fvec4(fvec3(texture(mat.occlusion, uv).r), 1.0)
+      }
       color = mix(color, color * texture(mat.occlusion, uv).r, mat.occlusionStrength)
     }
  
-    if mat.hasEmissive {
+    if mat.hasEmissive { 
+      if g.debugMode == kDebugModeEmissive {
+        return fvec4(texture(mat.emissive, uv).rgb, 1.0)
+      }
       color += srgb2linear(texture(mat.emissive, uv)).rgb * mat.emissiveFactor
     }
     
-    // TODO(ale64bit): color = toneMap(color)
-    color = baseColor.xyz 
-    return fvec4(color.r, color.g, color.b, baseColor.a)
+    color = toneMap(color)
+    return fvec4(color, baseColor.a)
   }
 }
 
 renderer PBR(depthBuf: rt_ds) {
 
-  def main(global: atom, geometry: atomlist) {
+  def main(global: atom, env: atom, geometry: atomlist) {
     depthBuf = 1.0
-    builtin.screen = fvec4(0.0, 0.0, 0.0, 1.0) 
+    builtin.screen = fvec4(0.4, 0.4, 0.4, 1.0) 
     for g in geometry {
-      builtin.screen, depthBuf += ForwardPass(g=global, 
+      builtin.screen, depthBuf += ForwardPass(g=global, env=env,
                                               mat=g, obj=g, 
                                               position=g, normal=g, color=g, tangent=g, uv=g)
     }

@@ -13,6 +13,7 @@ cc_binary(
         "main.cc",
     ],
     copts = COPTS,
+    data = ["//assets"],
     defines = DEFINES + [
         "STB_IMAGE_IMPLEMENTATION",
         "STB_IMAGE_WRITE_IMPLEMENTATION",
