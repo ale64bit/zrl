@@ -37,6 +37,7 @@ type Environment {
   diffuse: samplerCube
   specular: samplerCube
   brdfLUT: sampler2D
+  mipCount: float
 }
 
 type Material {
@@ -164,12 +165,13 @@ pipeline ForwardPass(g: Global, env: Environment, mat: Material, obj: PerObject)
 
   def getIBLContribution(materialInfo: MaterialInfo, n: fvec3, v: fvec3): fvec3 {
     val NdotV = clamp(dot(n, v), 0.0, 1.0)
+    val lod = clamp(materialInfo.perceptualRoughness * env.mipCount, 0.0, env.mipCount)
     val reflection = normalize(reflect(-v, n))
     val brdfSamplePoint = clamp(fvec2(NdotV, materialInfo.perceptualRoughness), fvec2(0.0), fvec2(1.0))
 
     val brdf = texture(env.brdfLUT, brdfSamplePoint).rg
     val diffuseSample = texture(env.diffuse, n)
-    val specularSample = texture(env.specular, reflection)
+    val specularSample = textureLod(env.specular, reflection, lod)
     
     val diffuseLight, specularLight = srgb2linear(diffuseSample).rgb, srgb2linear(specularSample).rgb
     val diffuse = diffuseLight * materialInfo.diffuseColor

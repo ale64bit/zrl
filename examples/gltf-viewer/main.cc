@@ -1,9 +1,11 @@
+#include <chrono>
 #include <string>
 #include <vector>
 
 #include "core/Core.h"
 #include "core/Log.h"
 #include "util/camera.h"
+#include "util/fps_counter.h"
 
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
@@ -44,7 +46,7 @@ template <> struct ForwardPass_env<std::string> {
     info.flags = 0;
     info.magFilter = VK_FILTER_LINEAR;
     info.minFilter = VK_FILTER_LINEAR;
-    info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+    info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     info.minLod = 0.0f;
     info.maxLod = 0.0f;
     info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
@@ -93,9 +95,10 @@ template <> struct ForwardPass_env<std::string> {
 
   void LoadEnvCubeMaps(const std::string &name,
                        SampledCubeMapReference &diffuse,
-                       SampledCubeMapReference &specular) const {
+                       SampledCubeMapReference &specular,
+                       float &mipCount) const {
     constexpr std::array<const char *, 6> kFaceNames = {
-        "front", "back", "top", "bottom", "left", "right",
+        "right", "left", "top", "bottom", "front", "back",
     };
 
     // Diffuse environment map.
@@ -133,6 +136,7 @@ template <> struct ForwardPass_env<std::string> {
     while (LevelExist(name, "specular", mip_levels)) {
       ++mip_levels;
     }
+    mipCount = static_cast<float>(mip_levels);
     for (int layer = 0; layer < 6; ++layer) {
       for (int level = 0; level < mip_levels; ++level) {
         int width, height, channels;
@@ -162,9 +166,15 @@ template <> struct ForwardPass_env<std::string> {
     uid = 1 << 30;
     if (data != nullptr) {
       SetSampler(data->diffuse.sampler_create_info);
+      data->diffuse.sampler_create_info.mipmapMode =
+          VK_SAMPLER_MIPMAP_MODE_NEAREST;
+      data->diffuse.sampler_create_info.maxLod = 0.25f;
       SetSampler(data->specular.sampler_create_info);
-      LoadEnvCubeMaps(name, data->diffuse, data->specular);
+      LoadEnvCubeMaps(name, data->diffuse, data->specular, data->mipCount);
       SetSampler(data->brdfLUT.sampler_create_info);
+      data->brdfLUT.sampler_create_info.mipmapMode =
+          VK_SAMPLER_MIPMAP_MODE_NEAREST;
+      data->brdfLUT.sampler_create_info.maxLod = 0.25f;
       LoadTexture("assets/textures/brdfLUT.png", data->brdfLUT);
     }
   }
@@ -485,10 +495,13 @@ int main(int argc, char *argv[]) {
     AddNodes(model, model.nodes[i], glm::fmat4(1.0), nodes);
   }
 
-  const std::string env_name = "studio_grey";
+  const std::string env_name = "papermill";
 
+  using namespace std::chrono_literals;
+  FpsCounter fps_counter(core.GetWindow(), 1s);
   glfwSetInputMode(core.GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   while (!glfwWindowShouldClose(core.GetWindow())) {
+    fps_counter.Update();
     double dx, dy, dz;
     std::tie(dx, dy, dz) = HandleInput(core.GetWindow(), global.debugMode);
     camera.Update(dx, dy, dz);

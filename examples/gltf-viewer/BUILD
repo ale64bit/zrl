@@ -24,6 +24,7 @@ cc_binary(
         ":pbr",
         "//core",
         "//util:camera",
+        "//util:fps_counter",
         "@glm",
         "@tinygltf",
         "@vulkan_repo//:sdk",
