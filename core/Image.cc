@@ -10,11 +10,15 @@ namespace zrl {
 Image::Image(const Core &core, VkExtent3D extent, uint32_t levels,
              uint32_t layers, VkFormat format, VkImageType img_type,
              VkImageViewType view_type, VkImageTiling tiling,
-             VkImageUsageFlags usage, VkMemoryPropertyFlags mem_prop_flags,
+             VkImageUsageFlags usage, VkSampleCountFlagBits samples,
+             VkMemoryPropertyFlags mem_prop_flags,
              VkImageAspectFlags aspect_mask)
     : device_(core.GetLogicalDevice().GetHandle()), extent_(extent),
       levels_(levels), layers_(layers), format_(format), view_type_(view_type),
       aspect_mask_(aspect_mask) {
+
+  // TODO: clamp the sample count according to device/format limits.
+  samples_ = samples;
 
   VkImageCreateInfo image_create_info = {};
   image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -27,7 +31,7 @@ Image::Image(const Core &core, VkExtent3D extent, uint32_t levels,
   image_create_info.tiling = tiling;
   image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   image_create_info.usage = usage;
-  image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+  image_create_info.samples = samples_;
   image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   if (view_type_ == VK_IMAGE_VIEW_TYPE_CUBE ||
       view_type_ == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
@@ -71,20 +75,21 @@ std::unique_ptr<Image> Image::Image1D(const Core &core, uint32_t extent,
                                       VkFormat format,
                                       VkImageUsageFlags usage) {
   VkExtent3D extent3D{extent, 1, 1};
-  return std::unique_ptr<Image>(new Image(
-      core, extent3D, levels, layers, format, VK_IMAGE_TYPE_1D,
-      VK_IMAGE_VIEW_TYPE_1D, VK_IMAGE_TILING_OPTIMAL, usage,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_ASPECT_COLOR_BIT));
+  return std::unique_ptr<Image>(
+      new Image(core, extent3D, levels, layers, format, VK_IMAGE_TYPE_1D,
+                VK_IMAGE_VIEW_TYPE_1D, VK_IMAGE_TILING_OPTIMAL, usage,
+                VK_SAMPLE_COUNT_1_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT));
 }
 
 std::unique_ptr<Image> Image::Image2D(const Core &core, VkExtent2D extent,
                                       uint32_t levels, uint32_t layers,
-                                      VkFormat format,
-                                      VkImageUsageFlags usage) {
+                                      VkFormat format, VkImageUsageFlags usage,
+                                      VkSampleCountFlagBits samples) {
   VkExtent3D extent3D{extent.width, extent.height, 1};
   return std::unique_ptr<Image>(new Image(
       core, extent3D, levels, layers, format, VK_IMAGE_TYPE_2D,
-      VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, usage,
+      VK_IMAGE_VIEW_TYPE_2D, VK_IMAGE_TILING_OPTIMAL, usage, samples,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_ASPECT_COLOR_BIT));
 }
 
@@ -92,30 +97,33 @@ std::unique_ptr<Image> Image::Image3D(const Core &core, VkExtent3D extent,
                                       uint32_t levels, uint32_t layers,
                                       VkFormat format,
                                       VkImageUsageFlags usage) {
-  return std::unique_ptr<Image>(new Image(
-      core, extent, levels, layers, format, VK_IMAGE_TYPE_3D,
-      VK_IMAGE_VIEW_TYPE_3D, VK_IMAGE_TILING_OPTIMAL, usage,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_ASPECT_COLOR_BIT));
+  return std::unique_ptr<Image>(
+      new Image(core, extent, levels, layers, format, VK_IMAGE_TYPE_3D,
+                VK_IMAGE_VIEW_TYPE_3D, VK_IMAGE_TILING_OPTIMAL, usage,
+                VK_SAMPLE_COUNT_1_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT));
 }
 
 std::unique_ptr<Image> Image::CubeMap(const Core &core, VkExtent2D extent,
                                       uint32_t levels, VkFormat format,
                                       VkImageUsageFlags usage) {
   VkExtent3D extent3D{extent.width, extent.height, 1};
-  return std::unique_ptr<Image>(new Image(
-      core, extent3D, levels, 6, format, VK_IMAGE_TYPE_2D,
-      VK_IMAGE_VIEW_TYPE_CUBE, VK_IMAGE_TILING_OPTIMAL, usage,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_ASPECT_COLOR_BIT));
+  return std::unique_ptr<Image>(
+      new Image(core, extent3D, levels, 6, format, VK_IMAGE_TYPE_2D,
+                VK_IMAGE_VIEW_TYPE_CUBE, VK_IMAGE_TILING_OPTIMAL, usage,
+                VK_SAMPLE_COUNT_1_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT));
 }
 
 std::unique_ptr<Image> Image::DepthBuffer(const Core &core, VkExtent2D extent,
                                           VkFormat format,
-                                          VkImageUsageFlags usage) {
+                                          VkImageUsageFlags usage,
+                                          VkSampleCountFlagBits samples) {
   VkExtent3D extent3D{extent.width, extent.height, 1};
   return std::unique_ptr<Image>(new Image(
       core, extent3D, 1, 1, format, VK_IMAGE_TYPE_2D, VK_IMAGE_VIEW_TYPE_2D,
-      VK_IMAGE_TILING_OPTIMAL, usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      VK_IMAGE_ASPECT_DEPTH_BIT));
+      VK_IMAGE_TILING_OPTIMAL, usage, samples,
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_IMAGE_ASPECT_DEPTH_BIT));
 }
 
 } // namespace zrl

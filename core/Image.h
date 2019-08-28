@@ -12,7 +12,8 @@ public:
   Image(const Core &core, VkExtent3D extent, uint32_t levels, uint32_t layers,
         VkFormat format, VkImageType img_type, VkImageViewType view_type,
         VkImageTiling tiling, VkImageUsageFlags usage,
-        VkMemoryPropertyFlags mem_prop_flags, VkImageAspectFlags aspect_mask);
+        VkSampleCountFlagBits samples, VkMemoryPropertyFlags mem_prop_flags,
+        VkImageAspectFlags aspect_mask);
   ~Image();
 
   // Constructors
@@ -23,7 +24,8 @@ public:
   static std::unique_ptr<Image> Image2D(const Core &core, VkExtent2D extent,
                                         uint32_t levels, uint32_t layers,
                                         VkFormat format,
-                                        VkImageUsageFlags usage);
+                                        VkImageUsageFlags usage,
+                                        VkSampleCountFlagBits samples);
   static std::unique_ptr<Image> Image3D(const Core &core, VkExtent3D extent,
                                         uint32_t levels, uint32_t layers,
                                         VkFormat format,
@@ -33,7 +35,8 @@ public:
                                         VkImageUsageFlags usage);
   static std::unique_ptr<Image> DepthBuffer(const Core &core, VkExtent2D extent,
                                             VkFormat format,
-                                            VkImageUsageFlags usage);
+                                            VkImageUsageFlags usage,
+                                            VkSampleCountFlagBits samples);
 
   // Accessors
   VkExtent3D GetExtent() const { return extent_; }
@@ -41,6 +44,7 @@ public:
   uint32_t GetLayerCount() const { return layers_; }
   VkFormat GetFormat() const { return format_; }
   VkImageViewType GetViewType() const { return view_type_; }
+  VkSampleCountFlagBits GetSampleCount() const { return samples_; }
   VkImageAspectFlags GetAspects() const { return aspect_mask_; }
   VkDeviceSize GetSize() const { return size_; }
   VkImage GetHandle() const { return image_; }
@@ -53,6 +57,7 @@ private:
   const uint32_t layers_;
   const VkFormat format_;
   const VkImageViewType view_type_;
+  VkSampleCountFlagBits samples_;
   const VkImageAspectFlags aspect_mask_;
   VkDeviceSize size_;
   VkImage image_;
