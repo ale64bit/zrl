@@ -1,12 +1,13 @@
 load("//core:builddefs.bzl", "COPTS", "DEFINES")
 
+package(default_visibility = ["//visibility:public"])
+
 cc_library(
     name = "camera",
     srcs = ["camera.cc"],
     hdrs = ["camera.h"],
     copts = COPTS,
     defines = DEFINES,
-    visibility = ["//visibility:public"],
     deps = [
         "@glm",
     ],
@@ -18,8 +19,15 @@ cc_library(
     hdrs = ["fps_counter.h"],
     copts = COPTS,
     defines = DEFINES,
-    visibility = ["//visibility:public"],
     deps = [
         "@glfw_repo//:glfw",
     ],
+)
+
+cc_library(
+    name = "cubedata",
+    hdrs = ["cubedata.h"],
+    copts = COPTS,
+    defines = DEFINES,
+    deps = ["@glm"],
 )

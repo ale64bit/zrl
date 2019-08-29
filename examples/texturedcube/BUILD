@@ -17,6 +17,7 @@ cc_binary(
     deps = [
         ":texturedcube",
         "//core",
+        "//util:cubedata",
         "@glfw_repo//:glfw",
         "@glm",
         "@stb//:stb_image",

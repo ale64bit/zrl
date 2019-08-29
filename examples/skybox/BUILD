@@ -19,6 +19,7 @@ cc_binary(
         ":skybox",
         "//core",
         "//util:camera",
+        "//util:cubedata",
         "@glfw_repo//:glfw",
         "@glm",
         "@stb//:stb_image",

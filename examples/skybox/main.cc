@@ -4,6 +4,7 @@
 #include "core/Core.h"
 #include "core/Log.h"
 #include "util/camera.h"
+#include "util/cubedata.h"
 
 #include "GLFW/glfw3.h"
 #include "glm/glm.hpp"
@@ -14,59 +15,7 @@
 
 struct Cube {
   const std::array<glm::fvec3, 36> position;
-} cube{
-    // From:
-    // https://github.com/LunarG/VulkanSamples/blob/master/API-Samples/data/cube_data.h
-    {
-        // left face
-        glm::fvec3(-1, -1, -1), // lft-top-front
-        glm::fvec3(-1, 1, 1),   // lft-btm-back
-        glm::fvec3(-1, -1, 1),  // lft-top-back
-        glm::fvec3(-1, 1, 1),   // lft-btm-back
-        glm::fvec3(-1, -1, -1), // lft-top-front
-        glm::fvec3(-1, 1, -1),  // lft-btm-front
-
-        // front face
-        glm::fvec3(-1, -1, -1), // lft-top-front
-        glm::fvec3(1, -1, -1),  // rgt-top-front
-        glm::fvec3(1, 1, -1),   // rgt-btm-front
-        glm::fvec3(-1, -1, -1), // lft-top-front
-        glm::fvec3(1, 1, -1),   // rgt-btm-front
-        glm::fvec3(-1, 1, -1),  // lft-btm-front
-
-        // top face
-        glm::fvec3(-1, -1, -1), // lft-top-front
-        glm::fvec3(1, -1, 1),   // rgt-top-back
-        glm::fvec3(1, -1, -1),  // rgt-top-front
-        glm::fvec3(-1, -1, -1), // lft-top-front
-        glm::fvec3(-1, -1, 1),  // lft-top-back
-        glm::fvec3(1, -1, 1),   // rgt-top-back
-
-        // bottom face
-        glm::fvec3(-1, 1, -1), // lft-btm-front
-        glm::fvec3(1, 1, 1),   // rgt-btm-back
-        glm::fvec3(-1, 1, 1),  // lft-btm-back
-        glm::fvec3(-1, 1, -1), // lft-btm-front
-        glm::fvec3(1, 1, -1),  // rgt-btm-front
-        glm::fvec3(1, 1, 1),   // rgt-btm-back
-
-        // right face
-        glm::fvec3(1, 1, -1),  // rgt-btm-front
-        glm::fvec3(1, -1, 1),  // rgt-top-back
-        glm::fvec3(1, 1, 1),   // rgt-btm-back
-        glm::fvec3(1, -1, 1),  // rgt-top-back
-        glm::fvec3(1, 1, -1),  // rgt-btm-front
-        glm::fvec3(1, -1, -1), // rgt-top-front
-
-        // back face
-        glm::fvec3(-1, 1, 1),  // lft-btm-back
-        glm::fvec3(1, 1, 1),   // rgt-btm-back
-        glm::fvec3(-1, -1, 1), // lft-top-back
-        glm::fvec3(-1, -1, 1), // lft-top-back
-        glm::fvec3(1, 1, 1),   // rgt-btm-back
-        glm::fvec3(1, -1, 1),  // rgt-top-back
-    },
-};
+} cube{kCubePosition};
 
 template <> struct Skybox_cubeMap<Cube> {
   void operator()(const Cube &, uint32_t &uid,
