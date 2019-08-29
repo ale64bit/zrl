@@ -455,41 +455,14 @@ int main(int argc, char *argv[]) {
   Camera camera(30.0f);
   std::vector<Node> nodes;
 
-  // global.lights[0].direction = glm::fvec3(0.0, -1.0, 0.1);
-  // global.lights[0].range = -1;
-  // global.lights[0].color = glm::fvec3(1, 1, 1);
-  // global.lights[0].intensity = 0.8;
-  // global.lights[0].position = glm::fvec3(4, 0, 4);
-  // global.lights[0].innerConeCos = 0;
-  // global.lights[0].outerConeCos = M_PI / 4;
-  // global.lights[0].lightType = 0; // directional
-
-  // global.lights[1].direction = glm::fvec3(0.0, 1.0, -1.1);
-  // global.lights[1].range = -1;
-  // global.lights[1].color = glm::fvec3(1, 1, 1);
-  // global.lights[1].intensity = 0.8;
-  // global.lights[1].position = glm::fvec3(4, 0, 4);
-  // global.lights[1].innerConeCos = 0;
-  // global.lights[1].outerConeCos = M_PI / 4;
-  // global.lights[1].lightType = 0; // directional
-
-  // global.lights[2].direction = glm::fvec3(1.0, -1.0, 0.1);
-  // global.lights[2].range = -1;
-  // global.lights[2].color = glm::fvec3(1, 1, 1);
-  // global.lights[2].intensity = 0.8;
-  // global.lights[2].position = glm::fvec3(4, 4, 0);
-  // global.lights[2].innerConeCos = 0;
-  // global.lights[2].outerConeCos = M_PI / 4;
-  // global.lights[2].lightType = 0; // directional
-
-  // global.lights[3].direction = glm::fvec3(1.0, 1.0, 1.1);
-  // global.lights[3].range = -1;
-  // global.lights[3].color = glm::fvec3(1, 1, 1);
-  // global.lights[3].intensity = 0.8;
-  // global.lights[3].position = glm::fvec3(0, 4, 4);
-  // global.lights[3].innerConeCos = 0;
-  // global.lights[3].outerConeCos = M_PI / 4;
-  // global.lights[3].lightType = 0; // directional
+  global.lights[0].direction = glm::fvec3(0.0, -1.0, 0.1);
+  global.lights[0].range = -1;
+  global.lights[0].color = glm::fvec3(1, 1, 1);
+  global.lights[0].intensity = 0.8;
+  global.lights[0].position = glm::fvec3(4, 0, 4);
+  global.lights[0].innerConeCos = 0;
+  global.lights[0].outerConeCos = M_PI / 4;
+  global.lights[0].lightType = 0; // directional
 
   for (int i : model.scenes[model.defaultScene].nodes) {
     AddNodes(model, model.nodes[i], glm::fmat4(1.0), nodes);
