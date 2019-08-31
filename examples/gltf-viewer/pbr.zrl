@@ -80,14 +80,14 @@ type MaterialInfo {
 pipeline ForwardPass(g: Global, env: Environment, mat: Material, obj: PerObject): (fvec4, float) {
 
   // See https://github.com/KhronosGroup/glTF-Sample-Viewer/blob/master/src/shaders/primitive.vert
-  def vertex(position, normal, color: fvec3, tangent: fvec4, uv: fvec2): (fvec3, fvec2, fvec4, fmat3, fvec3) {
+  def vertex(position, normal: fvec3, tangent, color: fvec4, uv: fvec2): (fvec3, fvec2, fvec4, fmat3, fvec3) {
     val pos = obj.model * fvec4(position, 1.0)
     builtin.position = g.projView * pos
     val outPos = pos.xyz / pos.w
 
     var vertexColor = fvec4(1.0, 1.0, 1.0, 1.0)
     if obj.hasColor {
-      vertexColor = fvec4(color, 1.0)
+      vertexColor = color
     }
 
     if obj.hasNormal {
@@ -297,7 +297,6 @@ pipeline ForwardPass(g: Global, env: Environment, mat: Material, obj: PerObject)
     } else {
       baseColor = mat.baseColorFactor
     }
-
     if g.debugMode == kDebugModeColor {
       return baseColor
     }

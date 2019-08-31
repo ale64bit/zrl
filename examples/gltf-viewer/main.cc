@@ -262,7 +262,7 @@ template <> struct ForwardPass_obj<Node> {
           node.m.meshes[node.mesh].primitives[node.primitive];
       data->model = node.model;
       data->normalMat = glm::transpose(glm::affineInverse(node.model));
-      data->hasColor = p.attributes.count("COLOR") != 0;
+      data->hasColor = p.attributes.count("COLOR_0") != 0;
       data->hasNormal = p.attributes.count("NORMAL") != 0;
       data->hasTangent = p.attributes.count("TANGENT") != 0;
     }
@@ -323,8 +323,8 @@ template <> struct ForwardPass_color<Node> {
                   VkDeviceSize &size) const noexcept {
     uid = 0;
     if (zrl::support::gltf::OptionalAttribute<TINYGLTF_COMPONENT_TYPE_FLOAT,
-                                              TINYGLTF_TYPE_VEC3>(
-            node.m, node.mesh, node.primitive, "COLOR", size, src)) {
+                                              TINYGLTF_TYPE_VEC4>(
+            node.m, node.mesh, node.primitive, "COLOR_0", size, src)) {
       uid = (node.mesh << 20) + (node.primitive << 10) + 4;
     }
   }
@@ -386,7 +386,7 @@ void AddNodes(const tinygltf::Model &model, const tinygltf::Node &node,
   }
 }
 
-std::tuple<double, double, double> HandleInput(GLFWwindow *window, int &mode) {
+void HandleInput(GLFWwindow *window, Camera &camera, int &mode) {
   static double last_x = 0, last_y = 0;
 
   glfwPollEvents();
@@ -400,23 +400,24 @@ std::tuple<double, double, double> HandleInput(GLFWwindow *window, int &mode) {
   if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS) {
     mode = 0;
   } else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
-    mode = 1;
+    mode = kDebugModeColor;
   } else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
-    mode = 2;
+    mode = kDebugModeNormal;
   } else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
-    mode = 3;
+    mode = kDebugModeMetallic;
   } else if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS) {
-    mode = 4;
+    mode = kDebugModeRoughness;
   } else if (glfwGetKey(window, GLFW_KEY_5) == GLFW_PRESS) {
-    mode = 5;
+    mode = kDebugModeOcclusion;
   } else if (glfwGetKey(window, GLFW_KEY_6) == GLFW_PRESS) {
-    mode = 6;
+    mode = kDebugModeEmissive;
   }
 
   if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
-    return std::make_tuple(.0, .0, dy);
+    camera.Update(0, 0, dy);
+  } else {
+    camera.Update(dx, dy, 0);
   }
-  return std::make_tuple(dx, dy, .0);
 }
 
 int main(int argc, char *argv[]) {
@@ -475,9 +476,7 @@ int main(int argc, char *argv[]) {
   glfwSetInputMode(core.GetWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   while (!glfwWindowShouldClose(core.GetWindow())) {
     fps_counter.Update();
-    double dx, dy, dz;
-    std::tie(dx, dy, dz) = HandleInput(core.GetWindow(), global.debugMode);
-    camera.Update(dx, dy, dz);
+    HandleInput(core.GetWindow(), camera, global.debugMode);
 
     glm::fmat4 proj = glm::perspective(
         glm::radians(63.0f), core.GetSwapchain().GetAspect(), 0.1f, 100.0f);

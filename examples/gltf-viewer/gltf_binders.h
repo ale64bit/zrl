@@ -72,10 +72,12 @@ void Attribute(const tinygltf::Model &model, int mesh, int primitive,
            "buffer views that are not tighly packed are not supported");
   CHECK_PC(!accessor.sparse.isSparse, "sparse accessors are not supported");
   CHECK_PC(accessor.componentType == ComponentType,
-           "position accessor component type must be " +
+           "accessor component type for attribute '" + attribute +
+               "' must be " +
                std::string(ComponentTypeString<ComponentType>()));
-  CHECK_PC(accessor.type == Type,
-           "position accessor type must be " + std::string(TypeString<Type>()));
+  CHECK_PC(accessor.type == Type, "accessor type for attribute '" + attribute +
+                                      "' must be " +
+                                      std::string(TypeString<Type>()));
   size = accessor.count * tinygltf::GetComponentSizeInBytes(ComponentType) *
          tinygltf::GetTypeSizeInBytes(Type);
   if (src != nullptr) {
