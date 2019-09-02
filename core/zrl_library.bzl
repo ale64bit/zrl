@@ -98,6 +98,7 @@ def zrl_library(name, src, defines = []):
         defines = DEFINES + defines,
         deps = [
             "//core",
+            "@glm",
             "@vulkan_repo//:sdk",
         ],
     )
