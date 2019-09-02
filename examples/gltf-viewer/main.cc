@@ -29,15 +29,6 @@ struct Node {
   const int primitive = 0;
 };
 
-template <> struct ForwardPass_g<Global> {
-  void operator()(const Global &g, uint32_t &uid, Global *data) const noexcept {
-    uid = 0;
-    if (data != nullptr) {
-      *data = g;
-    }
-  }
-};
-
 template <> struct ForwardPass_env<std::string> {
 
   void SetSampler(VkSamplerCreateInfo &info) const {
